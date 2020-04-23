@@ -1,4 +1,4 @@
-module repo.mwaysolutions.com/blockscape/raftify
+module github.com/BlockscapeLab/raftify
 
 go 1.14
 
