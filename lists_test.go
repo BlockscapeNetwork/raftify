@@ -43,8 +43,8 @@ func TestHeartbeatIDList(t *testing.T) {
 
 func TestVoteList(t *testing.T) {
 	initPending := []*memberlist.Node{
-		&memberlist.Node{Name: "1-One"},
-		&memberlist.Node{Name: "2-Two"},
+		{Name: "1-One"},
+		{Name: "2-Two"},
 	}
 
 	initPendingCopy := make([]*memberlist.Node, len(initPending))
