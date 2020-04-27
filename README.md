@@ -1,5 +1,9 @@
 # Raftify
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/blockscapelab/raftify)](https://goreportcard.com/report/github.com/blockscapelab/raftify)
+![Code Coverage](https://img.shields.io/badge/Code%20Coverage-68%25-yellow)
+[![License](https://img.shields.io/github/license/cosmos/cosmos-sdk.svg)](https://github.com/cosmos/cosmos-sdk/blob/master/LICENSE)
+
 > :warning: This project has not yet had a security audit or stress test and is therefore not ready for use in production! Use at your own risk!
 
 _Raftify_ is a Go implementation of the Raft leader election algorithm without the Raft log and enables the creation of a self-managing cluster of nodes by transforming an application into a Raft node. It is meant to be a **more cost-efficient** and **better-scaling** alternative to running a full-fledged Raft cluster with separate clients in an active/active setup.
