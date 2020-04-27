@@ -54,7 +54,7 @@ func TestAPI(t *testing.T) {
 	}
 
 	if node.GetState() != Leader {
-		t.Logf("Expected node to be leader, instead got %v", node.GetState())
+		t.Logf("Expected node to be leader, instead got %v", node.state.toString())
 		t.FailNow()
 	}
 }

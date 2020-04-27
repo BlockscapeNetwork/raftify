@@ -27,7 +27,19 @@ func (n *Node) toBootstrap() {
 	if n.config.Expect == 1 {
 		n.logger.Println("[DEBUG] raftify: Successfully bootstrapped cluster ✓")
 		n.saveState()
-		n.toLeader()
+
+		// If the node has no peers and thus does not try to join any, it can safely become the
+		// cluster leader for its single-node cluster. However, if there are peers in the peerlist
+		// and each node is expected to start on its own, the nodes must not become leaders right
+		// away since that would cause double-signing. Instead they become followers which gives
+		// enough leeway for heartbeat messages to be sent and received such that no two leaders
+		// exist simultaneously.
+		if len(n.config.PeerList) == 0 {
+			n.toLeader()
+		} else {
+			n.toFollower(0)
+		}
+
 		n.printMemberlist()
 		return
 	}

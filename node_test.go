@@ -7,11 +7,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 )
 
-func TestSingleNodeCluster(t *testing.T) {
+func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 	ports := reservePorts(1)
 	config := Config{
 		ID:       "Test",
@@ -37,7 +38,41 @@ func TestSingleNodeCluster(t *testing.T) {
 	}
 
 	if node.GetState() != Leader {
-		t.Logf("Expected node in single-node cluster to switch to leader immediately, instead it's in the %v state", node.GetState())
+		t.Logf("Expected node in single-node cluster to switch to leader immediately, instead it's in the %v state", node.state.toString())
+		t.FailNow()
+	}
+}
+
+func TestSingleNodeClusterWithPeers(t *testing.T) {
+	ports := reservePorts(2)
+	config := Config{
+		ID:       "Test",
+		MaxNodes: 2,
+		Expect:   1,
+		BindPort: ports[0],
+		PeerList: []string{
+			"0.0.0.0:" + strconv.Itoa(ports[1]),
+		},
+	}
+
+	// Initialize node.
+	pwd, _ := os.Getwd()
+	logger := log.New(os.Stderr, "", 0)
+
+	os.MkdirAll(pwd+"/testing/Node-0", 0755)
+	defer os.RemoveAll(pwd + "/testing")
+
+	nodesBytes, _ := json.Marshal(config)
+	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
+
+	node, err := InitNode(logger, pwd+"/testing/Node-0")
+	if err != nil {
+		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
+		t.FailNow()
+	}
+
+	if node.GetState() == Leader {
+		t.Log("Expected node in single-node cluster not to switch to leader immediately, instead it's in the leader state right away")
 		t.FailNow()
 	}
 }
