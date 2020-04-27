@@ -81,7 +81,7 @@ func (n *Node) runLeader() {
 				// If at any point the leader doesn't receive enough heartbeat responses anymore
 				// it is safe to assume it has been partitioned out into a smaller sub-cluster.
 				// It therefore needs to try to rejoin the cluster in order to receive the latest
-				// memberlist in case anything has changed during its abscence in the other
+				// memberlist in case anything has changed during its absence in the other
 				// sub-cluster.
 				n.rejoin = true
 

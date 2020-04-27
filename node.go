@@ -21,7 +21,7 @@ type Node struct {
 
 	// Flag which signals if a node has been partitioned out into a minority sub-cluster
 	// or has simply crashed/timed out and needs to initiate a rejoin in order to check
-	// whether there have been any changes to the memberlist during its abscence.
+	// whether there have been any changes to the memberlist during its absence.
 	rejoin bool
 
 	// The number of nodes making up the majority of nodes in the cluster needed to agree
@@ -160,7 +160,7 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	// If there is a state.json, it means that the node has not explicitly left the cluster
 	// and therefore must have been partitioned out or crashed/timed out. At this point, it
 	// is no longer guaranteed its memberlist is up-to-date and it therefore needs to initiate
-	// a rejoin to see if there were any changes to the cluster during its abscence.
+	// a rejoin to see if there were any changes to the cluster during its absence.
 	if _, err := os.Stat(workingDir + "/state.json"); err == nil {
 		node.logger.Println("[DEBUG] raftify: Found state.json, setting up rejoin...")
 		node.rejoin = true

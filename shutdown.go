@@ -11,7 +11,7 @@ func (n *Node) toShutdown() {
 	n.state = Shutdown
 }
 
-// runShutdown stops all timers/tickers and listenes, closes channels, leaves the memberlist
+// runShutdown stops all timers/tickers and listens, closes channels, leaves the memberlist
 // and shuts down the node eventually.
 func (n *Node) runShutdown() {
 	n.timeoutTimer.Stop()
