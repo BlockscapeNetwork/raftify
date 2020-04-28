@@ -12,7 +12,7 @@ Raftify was built with one particular use case in mind: **running a self-managin
 
 ## Requirements
 
-- Golang go1.14+
+- Golang 1.14+
 
 ## Configuration Reference
 
