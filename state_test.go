@@ -30,29 +30,29 @@ func TestSaveLoadDeleteState(t *testing.T) {
 	var err error
 	if node.memberlist, err = memberlist.Create(memberlist.DefaultWANConfig()); err != nil {
 		t.Logf("Expected creation of memberlist, instead got error: %v", err.Error())
-		t.Fail()
+		t.FailNow()
 	}
 
 	node.saveState()
 	if _, err := os.Stat(pwd + "/state.json"); err != nil {
 		t.Logf("Expected existing state.json, instead got error: %v", err.Error())
-		t.Fail()
+		t.FailNow()
 	}
 
 	list, err := node.loadState()
 	if err != nil {
 		t.Logf("Expected no errors during loadState, instead got: %v", err.Error())
-		t.Fail()
+		t.FailNow()
 	}
 	if len(list) != len(node.memberlist.Members()) {
 		t.Logf("Expected loaded list to be equal in size to the internal memberlist, instead got %v (loaded) and %v (internal)", len(list), len(node.memberlist.Members()))
-		t.Fail()
+		t.FailNow()
 	}
 
 	node.deleteState()
 	if _, err := os.Stat(pwd + "/state.json"); err == nil {
 		t.Log("Expected no state.json, instead it exists")
-		t.Fail()
+		t.FailNow()
 	}
 
 	node.memberlist.Leave(0)
