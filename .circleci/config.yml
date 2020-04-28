@@ -26,6 +26,6 @@ jobs:
       - run: make tests
       - run: mkdir -p /tmp/artifacts
       - run: mv coverage.html /tmp/artifacts
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run: bash <(curl -s https://codecov.io/bash) -f coverage.html
       - store_artifacts:
           path: /tmp/artifacts
