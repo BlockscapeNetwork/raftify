@@ -9,7 +9,45 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/memberlist"
 )
+
+func TestQuorumReached(t *testing.T) {
+	node := &Node{
+		state:  Candidate,
+		logger: log.New(os.Stderr, "", 0),
+		quorum: 2,
+	}
+
+	var err error
+	if node.memberlist, err = memberlist.Create(memberlist.DefaultWANConfig()); err != nil {
+		t.Logf("Expected creation of memberlist, instead got error: %v", err.Error())
+		t.FailNow()
+	}
+
+	if node.quorumReached(1) {
+		t.Log("Expected quorum not to be reached, instead it was marked as true")
+		t.FailNow()
+	}
+	if node.quorum != 2 {
+		t.Logf("Expected quorum to remain 2, instead got %v", node.quorum)
+		t.FailNow()
+	}
+
+	node.quorum = 2
+	if !node.quorumReached(2) {
+		t.Log("Expected quorum to be reached, instead it was marked as false")
+		t.FailNow()
+	}
+	if node.quorum != 1 {
+		t.Logf("Expected new quorum to be 1, instead got %v", node.quorum)
+		t.FailNow()
+	}
+
+	node.memberlist.Leave(0)
+	node.memberlist.Shutdown()
+}
 
 func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 	config := Config{
