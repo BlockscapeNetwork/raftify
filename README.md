@@ -1,7 +1,6 @@
 # Raftify
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/blockscapelab/raftify)](https://goreportcard.com/report/github.com/blockscapelab/raftify)
-![Code Coverage](https://img.shields.io/badge/Code%20Coverage-68.8%25-yellow)
 [![License](https://img.shields.io/github/license/cosmos/cosmos-sdk.svg)](https://github.com/cosmos/cosmos-sdk/blob/master/LICENSE)
 
 > :warning: This project has not yet had a security audit or stress test and is therefore not ready for use in production! Use at your own risk!
@@ -77,4 +76,6 @@ Use
 make tests
 ```
 
-to run package tests.
+to run package unit and integration tests.
+
+> :information_source: Code coverage may vary due to the nature of the integration tests.
