@@ -68,3 +68,13 @@ replace github.com/cosmos/cosmos-sdk => github.com/BlockscapeLab/raftify-cosmos-
 ```
 
 All that is left to do now is to build Gaia. For more information on how to do that, check out Gaia's [Makefile](https://github.com/cosmos/gaia/blob/master/Makefile).
+
+## Testing
+
+Use
+
+```go
+make tests
+```
+
+to run package tests.
