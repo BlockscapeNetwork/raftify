@@ -1,4 +1,4 @@
-# Golang CircleCI 2.0 configuration file
+e# Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
@@ -23,5 +23,5 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
-      - run: go test -v ./...
+      - run: make test
       - run: bash <(curl -s https://codecov.io/bash)
