@@ -26,11 +26,3 @@ func TestHexToByte(t *testing.T) {
 		t.Fail()
 	}
 }
-
-func TestReservePorts(t *testing.T) {
-	ports := reservePorts(10)
-	if len(ports) != 10 {
-		t.Logf("Expected 10 reserved ports, instead got %v", len(ports))
-		t.Fail()
-	}
-}

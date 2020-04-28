@@ -20,7 +20,7 @@ func TestConfigDefaults(t *testing.T) {
 		logger:     new(log.Logger),
 		workingDir: pwd,
 		config: &Config{
-			ID:       "Test",
+			ID:       "Node_TestConfigDefaults",
 			MaxNodes: 3,
 			Expect:   1,
 		},
@@ -63,7 +63,7 @@ func TestConfigDefaults(t *testing.T) {
 func TestLoadConfig(t *testing.T) {
 	pwd, _ := os.Getwd()
 	config := Config{
-		ID:          "Test",
+		ID:          "Node_TestLoadConfig",
 		MaxNodes:    3,
 		Encrypt:     "8ba4770b00f703fcc9e7d94f857db0e76fd53178d3d55c3e600a9f0fda9a75ad",
 		Performance: 1,
@@ -99,7 +99,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Logf("Expected invalid ID, instead %v passed as valid", config.ID)
 		t.Fail()
 	}
-	node.config.ID = "Test"
+	node.config.ID = "Node_TestLoadConfig"
 
 	// Invalid maximum node limit.
 	node.config.MaxNodes = 0
@@ -226,11 +226,11 @@ func TestLoadConfig(t *testing.T) {
 
 func TestTruncation(t *testing.T) {
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestTruncation",
 		MaxNodes: 3,
 		Expect:   1,
 		BindAddr: "0.0.0.0",
-		BindPort: 5000,
+		BindPort: 3000,
 		PeerList: []string{
 			"0.0.0.0:3000", // Local node
 			"0.0.0.0:3001",

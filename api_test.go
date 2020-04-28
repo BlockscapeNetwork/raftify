@@ -9,14 +9,12 @@ import (
 )
 
 func TestAPI(t *testing.T) {
-	ports := reservePorts(1)
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestAPI",
 		MaxNodes: 1,
 		Expect:   1,
 		LogLevel: "DEBUG",
-		BindAddr: "0.0.0.0",
-		BindPort: ports[0],
+		BindPort: 3000,
 	}
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
@@ -39,8 +37,8 @@ func TestAPI(t *testing.T) {
 	}
 
 	members := node.GetMembers()
-	if _, ok := members["Test"]; !ok {
-		t.Log("Expected to find member \"Test\", instead not found")
+	if _, ok := members["Node_TestAPI"]; !ok {
+		t.Log("Expected to find member \"Node_TestAPI\", instead not found")
 		t.FailNow()
 	}
 	if len(members) != 1 {
@@ -48,13 +46,18 @@ func TestAPI(t *testing.T) {
 		t.FailNow()
 	}
 
-	if node.GetID() != "Test" {
-		t.Logf("Expected id to be \"Test\", instead got %v", members["id"])
+	if node.GetID() != "Node_TestAPI" {
+		t.Logf("Expected id to be \"Node_TestAPI\", instead got %v", members["id"])
 		t.FailNow()
 	}
 
 	if node.GetState() != Leader {
 		t.Logf("Expected node to be leader, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+
+	if err := node.Shutdown(); err != nil {
+		t.Logf("Expected successful shutdown of Node_TestAPI, instead got error: %v", err.Error())
 		t.FailNow()
 	}
 }

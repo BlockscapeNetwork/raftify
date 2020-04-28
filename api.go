@@ -10,10 +10,6 @@ func InitNode(logger *log.Logger, workingDir string) (*Node, error) {
 // Shutdown stops all timers/tickers and listeners, closes channels, leaves the
 // memberlist and shuts down the node.
 func (n *Node) Shutdown() error {
-	defer close(n.messages.messageCh)
-	defer close(n.events.eventCh)
-	defer close(n.shutdownCh)
-
 	n.shutdownCh <- nil
 	err := <-n.shutdownCh
 	return err

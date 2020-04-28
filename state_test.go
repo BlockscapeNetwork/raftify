@@ -11,13 +11,12 @@ import (
 func TestSaveLoadDeleteState(t *testing.T) {
 	pwd, _ := os.Getwd()
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestSaveLoadDeleteState",
 		MaxNodes: 3,
 		Expect:   1,
 		BindAddr: "0.0.0.0",
-		BindPort: 5000,
+		BindPort: 3000,
 		PeerList: []string{
-			"0.0.0.0:3000",
 			"0.0.0.0:3001",
 			"0.0.0.0:3002",
 		},
@@ -55,4 +54,7 @@ func TestSaveLoadDeleteState(t *testing.T) {
 		t.Log("Expected no state.json, instead it exists")
 		t.Fail()
 	}
+
+	node.memberlist.Leave(0)
+	node.memberlist.Shutdown()
 }

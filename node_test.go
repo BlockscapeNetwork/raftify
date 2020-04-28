@@ -7,18 +7,16 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 )
 
 func TestSingleNodeClusterWithNoPeers(t *testing.T) {
-	ports := reservePorts(1)
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestSingleNodeClusterWithNoPeers",
 		MaxNodes: 1,
 		Expect:   1,
-		BindPort: ports[0],
+		BindPort: 3000,
 	}
 
 	// Initialize node.
@@ -41,17 +39,21 @@ func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 		t.Logf("Expected node in single-node cluster to switch to leader immediately, instead it's in the %v state", node.state.toString())
 		t.FailNow()
 	}
+
+	if err := node.Shutdown(); err != nil {
+		t.Logf("Expected successful shutdown of Node_TestSingleNodeClusterWithNoPeers, instead got error: %v", err.Error())
+		t.FailNow()
+	}
 }
 
 func TestSingleNodeClusterWithPeers(t *testing.T) {
-	ports := reservePorts(2)
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestSingleNodeClusterWithPeers",
 		MaxNodes: 2,
 		Expect:   1,
-		BindPort: ports[0],
+		BindPort: 3000,
 		PeerList: []string{
-			"0.0.0.0:" + strconv.Itoa(ports[1]),
+			"0.0.0.0:3001",
 		},
 	}
 
@@ -75,19 +77,24 @@ func TestSingleNodeClusterWithPeers(t *testing.T) {
 		t.Log("Expected node in single-node cluster not to switch to leader immediately, instead it's in the leader state right away")
 		t.FailNow()
 	}
+
+	if err := node.Shutdown(); err != nil {
+		t.Logf("Expected successful shutdown of Node_TestSingleNodeClusterWithPeers, instead got error: %v", err.Error())
+		t.FailNow()
+	}
 }
 
 func TestNode(t *testing.T) {
-	ports := reservePorts(3)
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestNode",
 		MaxNodes: 3,
 		Expect:   3,
+		BindPort: 3000,
 	}
 
 	// Populate peerlist.
 	for i := 0; i < config.MaxNodes; i++ {
-		config.PeerList = append(config.PeerList, fmt.Sprintf("0.0.0.0:%v", ports[i]))
+		config.PeerList = append(config.PeerList, fmt.Sprintf("0.0.0.0:%v", 3000+i))
 	}
 
 	// Initialize all nodes.
@@ -100,7 +107,7 @@ func TestNode(t *testing.T) {
 		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
 
 		config.ID = fmt.Sprintf("Node-%v", i)
-		config.BindPort = ports[i]
+		config.BindPort = 3000 + i
 
 		nodesBytes, _ := json.Marshal(config)
 		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
@@ -132,6 +139,7 @@ func TestNode(t *testing.T) {
 				t.Logf("Expected successful shutdown of Node-%v, instead got error: %v", i, err.Error())
 				t.FailNow()
 			}
+			nodes = append(nodes[:i], nodes[i+1:]...)
 			break
 		}
 		if i == len(nodes)-1 {
@@ -153,19 +161,26 @@ func TestNode(t *testing.T) {
 			t.FailNow()
 		}
 	}
+
+	for i, node := range nodes {
+		if err := node.Shutdown(); err != nil {
+			t.Logf("Expected successful shutdown of Node-%v, instead got error: %v", i, err.Error())
+			t.FailNow()
+		}
+	}
 }
 
 func TestNodeRejoin(t *testing.T) {
-	ports := reservePorts(3)
 	config := Config{
-		ID:       "Test",
+		ID:       "Node_TestNodeRejoin",
 		MaxNodes: 3,
 		Expect:   2,
+		BindPort: 3000,
 	}
 
 	// Populate peerlist.
 	for i := 0; i < config.MaxNodes; i++ {
-		config.PeerList = append(config.PeerList, fmt.Sprintf("0.0.0.0:%v", ports[i]))
+		config.PeerList = append(config.PeerList, fmt.Sprintf("0.0.0.0:%v", 3000+i))
 	}
 
 	// Initialize all nodes except one normally.
@@ -204,7 +219,7 @@ func TestNodeRejoin(t *testing.T) {
 		}
 
 		config.ID = fmt.Sprintf("Node-%v", i)
-		config.BindPort = ports[i]
+		config.BindPort = 3000 + i
 
 		nodesBytes, _ := json.Marshal(config)
 		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
@@ -231,5 +246,12 @@ func TestNodeRejoin(t *testing.T) {
 	if nodes[config.MaxNodes-1].rejoin {
 		t.Logf("Expected rejoin flag to be false, instead it's true")
 		t.FailNow()
+	}
+
+	for _, node := range nodes {
+		if err := node.Shutdown(); err != nil {
+			t.Logf("Expected successful shutdown of Node_TestNode, instead got error: %v", err.Error())
+			t.FailNow()
+		}
 	}
 }
