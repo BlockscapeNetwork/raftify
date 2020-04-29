@@ -3,6 +3,6 @@
 # the tests are not run in parallel.
 tests:
 	@echo "Running tests for Raftify..."
-	@go test -v -cover -coverprofile=c.out ./...
-	@go tool cover -html=c.out -o coverage.html
+	@go test -v -cover -coverprofile=coverage.txt -covermode=atomic ./...
+	@go tool cover -html=coverage.txt -o coverage.html
 	@echo "Tests finished"
