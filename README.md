@@ -1,8 +1,9 @@
 # Raftify
 
+[![CircleCI](https://circleci.com/gh/BlockscapeLab/raftify/tree/master.svg?style=shield)](https://circleci.com/gh/BlockscapeLab/raftify/tree/master)
+[![codecov](https://codecov.io/gh/BlockscapeLab/raftify/branch/master/graph/badge.svg)](https://codecov.io/gh/BlockscapeLab/raftify)
 [![Go Report Card](https://goreportcard.com/badge/github.com/blockscapelab/raftify)](https://goreportcard.com/report/github.com/blockscapelab/raftify)
 [![License](https://img.shields.io/github/license/cosmos/cosmos-sdk.svg)](https://github.com/cosmos/cosmos-sdk/blob/master/LICENSE)
-[![codecov](https://codecov.io/gh/BlockscapeLab/raftify/branch/master/graph/badge.svg)](https://codecov.io/gh/BlockscapeLab/raftify)
 
 > :warning: This project has not yet had a security audit or stress test and is therefore not ready for use in production! Use at your own risk!
 
