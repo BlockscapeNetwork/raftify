@@ -61,6 +61,9 @@ func (n *Node) runBootstrap() {
 		if len(n.memberlist.Members()) >= n.config.Expect {
 			n.logger.Println("[DEBUG] raftify: Successfully bootstrapped cluster ✓")
 			n.toFollower(0)
+
+			// Signal successful bootstrap and allow InitNode to return.
+			n.bootstrapCh <- nil
 		}
 
 	case <-time.After(5 * time.Second):
