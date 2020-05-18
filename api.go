@@ -3,6 +3,7 @@ package raftify
 import "log"
 
 // InitNode initializes a new raftified node.
+// Blocks until cluster is successfully bootstrapped.
 func InitNode(logger *log.Logger, workingDir string) (*Node, error) {
 	return initNode(logger, workingDir)
 }
