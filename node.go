@@ -51,6 +51,9 @@ type Node struct {
 	// Delegate for join and leave updates.
 	events *ChannelEventDelegate
 
+	// Channel used to signal successful bootstrap.
+	bootstrapCh chan bool
+
 	// Channel used for shutdown.
 	shutdownCh chan error
 
@@ -124,6 +127,7 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 		workingDir:    workingDir,
 		timeoutTimer:  time.NewTimer(time.Second),
 		messageTicker: time.NewTicker(time.Second),
+		bootstrapCh:   make(chan bool),  // This must NEVER be a buffered channel.
 		shutdownCh:    make(chan error), // This must NEVER be a buffered channel.
 	}
 
@@ -196,6 +200,14 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	}
 
 	go node.runLoop()
+
+	// Block until cluster has been successfully bootstrapped. Both toBootstrap and toFollower are
+	// able to unblock. Don't block if expect is set to 1 since that will be bootstrapped immediately.
+	// Also, block if the node is trying to rejoin an existing cluster as that will intentionally
+	// skip the bootstrap phase.
+	if node.config.Expect != 1 || node.rejoin {
+		_ = <-node.bootstrapCh
+	}
 	return node, nil
 }
 

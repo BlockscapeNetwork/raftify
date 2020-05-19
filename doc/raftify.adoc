@@ -52,6 +52,7 @@ Must be greater than 0.
 
 |expect|int|*(Mandatory)* The number of nodes expected to be online in order to bootstrap the cluster and start the leader election. Once the expected number of nodes is online, all cluster members will be started simultaneously.
 Must be 1 or higher.
+*WARNING:* Please use `expect = 1` for single-node setups only. If you plan on running more than one node, set the `expect` value to the final cluster size on **ALL** nodes. 
 
 |encrypt|string|_(Optional)_ The hex representation of the secret key used to encrypt messages.
 The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256. Use https://www.browserling.com/tools/random-bytes[this tool] to generate a key.
@@ -81,7 +82,7 @@ Must not be empty if more than one node is expected.
 func InitNode(logger *log.Logger, workingDir string) (*Node, error)
 ----
 
-Initializes a new Raftify node.
+Initializes a new Raftify node. Blocks until the cluster is successfully bootstrapped.
 
 [source,go]
 ----

@@ -150,13 +150,15 @@ func TestNode(t *testing.T) {
 		nodesBytes, _ := json.Marshal(config)
 		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
 
-		node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
-		if err != nil {
-			t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
-			t.FailNow()
-		}
+		go func(pwd string, i int) {
+			node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
+			if err != nil {
+				t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
+				t.FailNow()
+			}
 
-		nodes = append(nodes, node)
+			nodes = append(nodes, node)
+		}(pwd, i)
 	}
 
 	// Wait for bootstrap to kick in for a leader to be elected.
@@ -262,23 +264,19 @@ func TestNodeRejoin(t *testing.T) {
 		nodesBytes, _ := json.Marshal(config)
 		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
 
-		node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
-		if err != nil {
-			t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
-			t.FailNow()
-		}
+		go func(pwd string, i int) {
+			node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
+			if err != nil {
+				t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
+				t.FailNow()
+			}
 
-		nodes = append(nodes, node)
+			nodes = append(nodes, node)
+		}(pwd, i)
 	}
 
-	// Check whether the rejoin flag has been set.
-	if !nodes[config.MaxNodes-1].rejoin {
-		t.Logf("Expected rejoin flag to be true, instead it's false")
-		t.FailNow()
-	}
-
-	// Wait until the node has rejoined.
-	time.Sleep(1500 * time.Millisecond)
+	// Wait for bootstrap to kick in for a leader to be elected.
+	time.Sleep(2 * time.Second)
 
 	// Check whether the node has successfully rejoined.
 	if nodes[config.MaxNodes-1].rejoin {

@@ -49,7 +49,7 @@ func TestConfigDefaults(t *testing.T) {
 		t.Fail()
 	}
 	if node.config.BindPort != 7946 {
-		t.Logf("Expected bind_port to binf to port 7946, instead got %v", node.config.BindPort)
+		t.Logf("Expected bind_port to bind to port 7946, instead got %v", node.config.BindPort)
 		t.Fail()
 	}
 	if len(node.config.PeerList) != 0 {
