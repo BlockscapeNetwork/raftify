@@ -63,7 +63,7 @@ func (n *Node) runBootstrap() {
 			n.toFollower(0)
 
 			// Signal successful bootstrap and allow InitNode to return.
-			n.bootstrapCh <- nil
+			n.bootstrapCh <- true
 		}
 
 	case <-time.After(5 * time.Second):

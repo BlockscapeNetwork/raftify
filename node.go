@@ -52,7 +52,7 @@ type Node struct {
 	events *ChannelEventDelegate
 
 	// Channel used to signal successful bootstrap.
-	bootstrapCh chan error
+	bootstrapCh chan bool
 
 	// Channel used for shutdown.
 	shutdownCh chan error
@@ -127,7 +127,7 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 		workingDir:    workingDir,
 		timeoutTimer:  time.NewTimer(time.Second),
 		messageTicker: time.NewTicker(time.Second),
-		bootstrapCh:   make(chan error), // This must NEVER be a buffered channel.
+		bootstrapCh:   make(chan bool),  // This must NEVER be a buffered channel.
 		shutdownCh:    make(chan error), // This must NEVER be a buffered channel.
 	}
 

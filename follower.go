@@ -71,7 +71,7 @@ func (n *Node) runFollower() {
 			n.logger.Println("[DEBUG] raftify: Successfully rejoined the cluster ✓")
 
 			// Signal successful bootstrap and allow InitNode to return.
-			n.bootstrapCh <- nil
+			n.bootstrapCh <- true
 		}
 		n.toPreCandidate()
 
