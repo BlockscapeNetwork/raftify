@@ -112,14 +112,3 @@ func (n *Node) GetState() State
 ----
 
 Returns the node's current state which is either Leader, Follower, PreCandidate or Candidate.
-
-== Optional Features/Improvements
-
-[cold="3*"]
-|===
-|Current state|Proposed changes|Desired effect
-
-|Intended and unintended leave events are internally handled the same. There’s no difference between a node being shut down and a crashed node leaving the cluster.|Implement custom message to be broadcasted alongside the default events that triggers an immediate change of the cluster size for intended leave events and therefore also the quorum.|Makes sure that only failover scenarios are backed by the constraint of having to reach the quorum of the previous cluster size. A cluster with 2 nodes for example could be shrunk to a single-node cluster and keep running despite the majority of nodes taken offline.
-
-|Once the expected number of nodes are online and the cluster is bootstrapped, the nodes go through the full election process in order to elect their first leader.|Make the first node to start up the first leader on successful bootstrap. This can be measured by how many peers could be reached. If a node reaches no peers, it means that it started up first and thus it will skip the precandidate and candidate states and immediately become the first leader.|This skips the delay associated with the prevoting and voting phase needed to elect the first leader in order to get things going. This saves a few seconds on startup at best, so it’s nice to have.
-|===
