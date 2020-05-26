@@ -161,6 +161,9 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 		missedPrevoteCycles: 0,
 	}
 
+	// Print out version information on initialization.
+	node.logger.Printf("[INFO] raftify: Running Raftify %v...", Version)
+
 	// If there is a state.json, it means that the node has not explicitly left the cluster
 	// and therefore must have been partitioned out or crashed/timed out. At this point, it
 	// is no longer guaranteed its memberlist is up-to-date and it therefore needs to initiate
