@@ -56,6 +56,13 @@ type VoteResponse struct {
 	VoteGranted bool   `json:"vote_granted"`
 }
 
+// NewQuorum defines the message sent out by a node if it leaves the cluster voluntarily
+// and thus triggers an immediate quorum change. This does not include crash-related
+// leaves.
+type NewQuorum struct {
+	NewQuorum int `json:"new_quorum"`
+}
+
 // sendHeartbeatToAll sends a heartbeat message to all the other cluster members.
 func (n *Node) sendHeartbeatToAll() {
 	n.heartbeatIDList.reset()
@@ -220,6 +227,31 @@ func (n *Node) sendVoteResponse(candidateid string, grant bool) {
 		n.logger.Printf("[DEBUG] raftify: Sent vote response to %v (granted)\n", candidateid)
 	} else {
 		n.logger.Printf("[DEBUG] raftify: Sent vote response to %v (not granted)\n", candidateid)
+	}
+}
+
+// sendNewQuorumToAll sends a notification to all cluster members and signals a voluntary
+// leave event. Once memberlist processed the leave event internally, this message is used
+// to trigger an immediate change of the new quorum instead of waiting for the dead node to
+// be kicked.
+func (n *Node) sendNewQuorumToAll(newquorum int) {
+	qrmBytes, _ := json.Marshal(NewQuorum{
+		NewQuorum: newquorum,
+	})
+	msgBytes, _ := json.Marshal(Message{
+		Type:    NewQuorumMsg,
+		Content: qrmBytes,
+	})
+
+	for _, member := range n.memberlist.Members() {
+		if member.Name == n.config.ID {
+			continue
+		}
+		if err := n.memberlist.SendReliable(member, msgBytes); err != nil {
+			n.logger.Printf("[ERR] raftify: couldn't send new quorum to %v: %v\n", member.Name, err.Error())
+			continue
+		}
+		n.logger.Printf("[DEBUG] raftify: Sent new quorum (%v votes) to %v\n", newquorum, member.Name)
 	}
 }
 

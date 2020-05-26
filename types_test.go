@@ -83,6 +83,12 @@ func TestMessageTypeToString(t *testing.T) {
 		t.Fail()
 	}
 
+	msg = NewQuorumMsg
+	if msg.toString() != "NewQuorumMsg" {
+		t.Logf("Expected to get \"NewQuorumMsg\", instead got %v", msg.toString())
+		t.Fail()
+	}
+
 	msg = 100
 	if msg.toString() != "unknown" {
 		t.Logf("Expected to get \"unknown\", instead got %v", msg.toString())

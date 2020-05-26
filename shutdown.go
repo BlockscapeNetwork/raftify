@@ -2,6 +2,7 @@ package raftify
 
 import (
 	"fmt"
+	"math"
 )
 
 // toShutdown initiates the transition into the shutdown mode. In this mode, the node
@@ -19,10 +20,17 @@ func (n *Node) runShutdown() {
 
 	n.deleteState()
 
+	// Calculate new quorum for new reduced cluster size and send it out.
+	newQuorum := math.Ceil(float64(((len(n.memberlist.Members()) - 1) / 2) + 1))
+	n.sendNewQuorumToAll(int(newQuorum))
+
+	// Initiate leave event.
 	var errs string
 	if err := n.memberlist.Leave(0); err != nil {
 		errs += fmt.Sprintf("\t%v\n", err)
 	}
+
+	// Shut down listeners.
 	if err := n.memberlist.Shutdown(); err != nil {
 		errs += fmt.Sprintf("\t%v\n", err)
 	}

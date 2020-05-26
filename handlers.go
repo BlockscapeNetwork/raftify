@@ -187,3 +187,23 @@ func (n *Node) handleVoteResponse(msg VoteResponse) {
 		n.logger.Printf("[DEBUG] raftify: Received vote response from %v (not granted)\n", msg.FollowerID)
 	}
 }
+
+// handleNewQuorum handles the receivel of a new quorum message from a voluntarily leaving node.
+func (n *Node) handleNewQuorum(msg NewQuorum) {
+	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
+	n.quorum = msg.NewQuorum
+
+	// Equal to 2, because this check is called just before the second to last node leaves.
+	if len(n.memberlist.Members()) == 2 {
+		n.logger.Printf("[DEBUG] raftify: %v is the only node left in the cluster, entering leader state for term %v...", n.config.ID, n.currentTerm)
+
+		// Switch to leader without calling toLeader in order to bypass the state change restriction
+		// in this one corner case.
+		n.timeoutTimer.Stop()  // Leaders have no timeout
+		n.startMessageTicker() // Used to periodically send out heartbeat messages
+		n.heartbeatIDList.reset()
+
+		n.votedFor = ""
+		n.state = Leader
+	}
+}

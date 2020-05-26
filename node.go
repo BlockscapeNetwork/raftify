@@ -246,8 +246,13 @@ func (n *Node) quorumReached(votes int) bool {
 	// a network partition, the quorum of the previous cluster size needs to be reached and thus
 	// no two leaders can exist simultaneously in both partitions. The larger partition will have
 	// a leader, the smaller one won't.
+	// If the node is the only node remaining, it can't fulfil the requirement of also reaching
+	// the previous quorum. In this case, the previous quorum is skipped. This is the only time
+	// this requirement is lifted.
 	n.logger.Printf("[DEBUG] raftify: %v quorum reached: (%v/%v)\n", n.state.toString(), votes, n.quorum)
-	n.quorum = int(len(n.memberlist.Members())/2) + 1
+	if n.quorum != 1 {
+		n.quorum = int(len(n.memberlist.Members())/2) + 1
+	}
 	return true
 }
 

@@ -86,6 +86,11 @@ const (
 	// A vote response message is sent by the node who received the vote
 	// request to the candidate it originated from.
 	VoteResponseMsg
+
+	// A new quorum message is sent by a voluntarily leaving node. It triggers
+	// an immediate quorum change instead of having to wait for the cluster to
+	// detect and kick the dead node eventually.
+	NewQuorumMsg
 )
 
 // toString returns the string representation of a message type.
@@ -103,6 +108,8 @@ func (t *MessageType) toString() string {
 		return "VoteRequestMsg"
 	case VoteResponseMsg:
 		return "VoteResponseMsg"
+	case NewQuorumMsg:
+		return "NewQuorumMsg"
 	default:
 		return "unknown"
 	}

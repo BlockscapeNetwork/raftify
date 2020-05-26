@@ -2,6 +2,9 @@ package raftify
 
 import (
 	"encoding/json"
+	"math"
+
+	"github.com/hashicorp/memberlist"
 )
 
 // toPreCandidate initiates the transition of a follower into a precandidate.
@@ -58,6 +61,17 @@ func (n *Node) runPreCandidate() {
 				break
 			}
 			n.handleVoteRequest(content)
+
+		case NewQuorumMsg:
+			var content NewQuorum
+			if err := json.Unmarshal(msg.Content, &content); err != nil {
+				n.logger.Printf("[ERR] raftify: error while unmarshaling new quorum message: %v\n", err.Error())
+				break
+			}
+			n.handleNewQuorum(content)
+
+		default:
+			n.logger.Printf("[WARN] raftify: received %v as precandidate, discarding...\n", msg.Type.toString())
 		}
 
 	case <-n.timeoutTimer.C:
@@ -82,8 +96,14 @@ func (n *Node) runPreCandidate() {
 			n.toFollower(n.currentTerm)
 		}
 
-	case <-n.events.eventCh:
+	case event := <-n.events.eventCh:
 		n.saveState()
+
+		// Calculate new quorum for new increased cluster size and send it out.
+		if event.Event == memberlist.NodeJoin {
+			newQuorum := math.Ceil(float64((len(n.memberlist.Members()) / 2) + 1))
+			n.sendNewQuorumToAll(int(newQuorum))
+		}
 
 	case <-n.shutdownCh:
 		n.toShutdown()

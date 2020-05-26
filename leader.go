@@ -2,13 +2,16 @@ package raftify
 
 import (
 	"encoding/json"
+	"math"
+
+	"github.com/hashicorp/memberlist"
 )
 
 // toLeader initiates the transition into a leader node. Calling toLeader on a node that already is
 // in the leader state just resets the data.
 func (n *Node) toLeader() {
-	if n.state == Follower {
-		n.logger.Println("[WARN] raftify: follower nodes cannot directly switch to leader")
+	if n.state == Follower || n.state == PreCandidate {
+		n.logger.Println("[WARN] raftify: follower and precandidate nodes cannot directly switch to leader")
 		return
 	}
 
@@ -66,6 +69,14 @@ func (n *Node) runLeader() {
 			}
 			n.handleVoteRequest(content)
 
+		case NewQuorumMsg:
+			var content NewQuorum
+			if err := json.Unmarshal(msg.Content, &content); err != nil {
+				n.logger.Printf("[ERR] raftify: error while unmarshaling new quorum message: %v\n", err.Error())
+				break
+			}
+			n.handleNewQuorum(content)
+
 		default:
 			n.logger.Printf("[WARN] raftify: received %v as leader, discarding...\n", msg.Type.toString())
 		}
@@ -76,7 +87,7 @@ func (n *Node) runLeader() {
 			n.logger.Printf("[DEBUG] raftify: Not enough heartbeat responses for %v cycles\n", n.heartbeatIDList.subQuorumCycles)
 
 			if n.heartbeatIDList.subQuorumCycles >= MaxSubQuorumCycles {
-				n.logger.Println("[DEBUG] raftify: Too many cycles without reaching leader quorum, stepping down as a leader...")
+				n.logger.Println("[DEBUG] raftify: Too many cycles without reaching leader quorum, stepping down as leader...")
 
 				// If at any point the leader doesn't receive enough heartbeat responses anymore
 				// it is safe to assume it has been partitioned out into a smaller sub-cluster.
@@ -92,7 +103,7 @@ func (n *Node) runLeader() {
 				// Reload the config so that the memberlist from the state.json is loaded into
 				// the peerlist.
 				if err := n.loadConfig(); err != nil {
-					n.logger.Printf("[ERR] raftify: %v; fallback with peerlist from raftify.json\n", err.Error())
+					n.logger.Printf("[ERR] raftify: %v, fall back to raftify.json\n", err.Error())
 				}
 
 				// Step down as a leader if too many cycles have passed without reaching quorum.
@@ -106,8 +117,14 @@ func (n *Node) runLeader() {
 
 		n.sendHeartbeatToAll()
 
-	case <-n.events.eventCh:
+	case event := <-n.events.eventCh:
 		n.saveState()
+
+		// Calculate new quorum for new increased cluster size and send it out.
+		if event.Event == memberlist.NodeJoin {
+			newQuorum := math.Ceil(float64((len(n.memberlist.Members()) / 2) + 1))
+			n.sendNewQuorumToAll(int(newQuorum))
+		}
 
 	case <-n.shutdownCh:
 		n.toShutdown()
