@@ -57,6 +57,7 @@ Must be 1 or higher.
 |encrypt|string|_(Optional)_ The hex representation of the secret key used to encrypt messages.
 The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256.
 https://www.browserling.com/tools/random-bytes[*Use this tool to generate a key*].
+*IMPORTANT:* Strongly recommended for use in production.
 
 |performance|int|_(Optional)_ The modifier used to multiply the maximum and minimum timeout and ticker settings. Higher values increase leader stability and reduce bandwidth and CPU but also increase the time needed to recover from a leader failure.
 Must be 1 or higher. Defaults to 1 which is also the maximum performance setting.
