@@ -32,7 +32,7 @@ During an election, each node can only vote for one candidate. A candidate alway
 
 * A cluster size of n can tolerate up to `floor((n-1)/2)`` node failures.
 ** Example: A cluster of 5 nodes tolerates `floor((5-1)/2) = 2` node failures.
-* There must never fail more than `floor((n-1)/2)`_` nodes at the same time. Once the failed nodes are kicked out of the memberlist and the size shrinks, the tolerance resets to the new reduced cluster size.
+* There must never fail more than `floor((n-1)/2)` nodes at the same time. Once the failed nodes are kicked out of the memberlist and the size shrinks, the tolerance resets to the new reduced cluster size.
 ** Example 1: If in a cluster of 5 nodes 3 nodes fail in a short time frame, the remaining 2 nodes will never be able to reach the quorum again in order to negotiate a new leader.
 ** Example 2: If in a cluster of 5 nodes 2 nodes fail in a short time frame, the remaining 3 nodes will still be able to reach the quorum in order to negotiate a new leader. The crashed nodes will eventually be kicked from the memberlist, thus shrinking the cluster size to a total of 3 nodes and adjusting its failure tolerance to `floor((3-1)/2) = 1` node.
 
@@ -55,7 +55,8 @@ Must be 1 or higher.
 *WARNING:* Please use `expect = 1` for single-node setups only. If you plan on running more than one node, set the `expect` value to the final cluster size on **ALL** nodes. 
 
 |encrypt|string|_(Optional)_ The hex representation of the secret key used to encrypt messages.
-The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256. Use https://www.browserling.com/tools/random-bytes[this tool] to generate a key.
+The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256.
+https://www.browserling.com/tools/random-bytes[*Use this tool to generate a key*].
 
 |performance|int|_(Optional)_ The modifier used to multiply the maximum and minimum timeout and ticker settings. Higher values increase leader stability and reduce bandwidth and CPU but also increase the time needed to recover from a leader failure.
 Must be 1 or higher. Defaults to 1 which is also the maximum performance setting.
@@ -104,7 +105,7 @@ are better, and 0 means "totally healthy".
 func (n *Node) GetMembers() map[string]string
 ----
 
-Returns a map of all members listed in the local memberlist with their respective id and address.
+Returns a map of all members listed in the local memberlist with their respective `id` and `address`.
 
 [source,go]
 ----
