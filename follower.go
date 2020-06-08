@@ -2,9 +2,6 @@ package raftify
 
 import (
 	"encoding/json"
-	"math"
-
-	"github.com/hashicorp/memberlist"
 )
 
 // toFollower initiates the transition into a follower node for a given term. Calling toFollower
@@ -55,13 +52,13 @@ func (n *Node) runFollower() {
 			}
 			n.handleVoteRequest(content)
 
-		case NewQuorumMsg:
-			var content NewQuorum
+		case IntentionalLeaveMsg:
+			var content IntentionalLeave
 			if err := json.Unmarshal(msg.Content, &content); err != nil {
-				n.logger.Printf("[ERR] raftify: error while unmarshaling new quorum message: %v\n", err.Error())
+				n.logger.Printf("[ERR] raftify: error while unmarshaling intentional leave broadcast: %v\n", err.Error())
 				break
 			}
-			n.handleNewQuorum(content)
+			n.handleIntentionalLeave(content)
 
 		default:
 			n.logger.Printf("[WARN] raftify: received %v as follower, discarding...\n", msg.Type.toString())
@@ -86,14 +83,8 @@ func (n *Node) runFollower() {
 		}
 		n.toPreCandidate()
 
-	case event := <-n.events.eventCh:
+	case <-n.events.eventCh:
 		n.saveState()
-
-		// Calculate new quorum for new increased cluster size and send it out.
-		if event.Event == memberlist.NodeJoin {
-			newQuorum := math.Ceil(float64((len(n.memberlist.Members()) / 2) + 1))
-			n.sendNewQuorumToAll(int(newQuorum))
-		}
 
 	case <-n.shutdownCh:
 		n.toShutdown()

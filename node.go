@@ -137,6 +137,12 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	node.messages = &MessageDelegate{
 		logger:    logger,
 		messageCh: make(chan []byte),
+		broadcasts: &memberlist.TransmitLimitedQueue{
+			NumNodes: func() int {
+				return node.memberlist.NumMembers()
+			},
+			RetransmitMult: 3,
+		},
 	}
 	node.events = &ChannelEventDelegate{
 		logger: logger,
@@ -224,6 +230,16 @@ func (n *Node) startMessageTicker() {
 	n.messageTicker = time.NewTicker(time.Duration((TickerInterval * n.config.Performance)) * time.Millisecond)
 }
 
+// getNodeByName returns the full Node struct from memberlist to the specified name.
+func (n *Node) getNodeByName(name string) (*memberlist.Node, error) {
+	for _, member := range n.memberlist.Members() {
+		if name == member.Name {
+			return member, nil
+		}
+	}
+	return nil, fmt.Errorf("couldn't find %v in the local memberlist", name)
+}
+
 // quorumReached checks whether the specified number of votes make up the majority in order
 // to reach quorum. Once the quorum is reached, a new quorum is set based on the current size
 // of the memberlist. This allows the quorum to change dynamically with the cluster size.
@@ -285,8 +301,9 @@ func (n *Node) runLoop() {
 // MessageDelegate is the interface that clients must implement if they want to hook into the gossip
 // layer of Memberlist.
 type MessageDelegate struct {
-	logger    *log.Logger
-	messageCh chan []byte
+	logger     *log.Logger
+	messageCh  chan []byte
+	broadcasts *memberlist.TransmitLimitedQueue
 }
 
 // NotifyMsg implements the Delegate interface.
@@ -306,7 +323,7 @@ func (d *MessageDelegate) LocalState(join bool) []byte {
 
 // GetBroadcasts implements the Delegate interface.
 func (d *MessageDelegate) GetBroadcasts(overhead, limit int) [][]byte {
-	return nil // Not used.
+	return d.broadcasts.GetBroadcasts(overhead, limit)
 }
 
 // MergeRemoteState implements the Delegate interface.

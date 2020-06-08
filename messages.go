@@ -2,7 +2,6 @@ package raftify
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -11,6 +10,26 @@ import (
 type Message struct {
 	Type    MessageType     `json:"type"`
 	Content json.RawMessage `json:"content"`
+}
+
+// Invalidates checks if enqueuing the current broadcast invalidates a previous broadcast.
+func (b *Message) Invalidates(other memberlist.Broadcast) bool {
+	return false
+}
+
+// Finished is invoked when the message will no longer be broadcasted, either due to invalidation
+// or to the transmit limit being reached.
+func (b *Message) Finished() {}
+
+// UniqueBroadcast is just a marker method for the UniqueBroadcast interface.
+func (b *Message) UniqueBroadcast() {}
+
+// Message returns a byte form of the broadcasted message.
+func (b *Message) Message() []byte {
+	if data, err := json.Marshal(b); err == nil {
+		return data
+	}
+	return []byte("")
 }
 
 // Heartbeat defines the message sent out by the leader to all cluster members.
@@ -56,11 +75,33 @@ type VoteResponse struct {
 	VoteGranted bool   `json:"vote_granted"`
 }
 
-// NewQuorum defines the message sent out by a node if it leaves the cluster voluntarily
-// and thus triggers an immediate quorum change. This does not include crash-related
-// leaves.
-type NewQuorum struct {
-	NewQuorum int `json:"new_quorum"`
+// IntentionalLeave defines the broadcast message which is sent out on an intentional
+// leave event. This message is not to be broadcasted on unintentional/crash-related events.
+// The broadcast message is sent out via gossip, so it can be sent out after the node leaves
+// but hasn't shut down its listeners yet.
+type IntentionalLeave struct {
+	NodeEvent memberlist.NodeEventType `json:"node_event"`
+	NewQuorum int                      `json:"new_quorum"`
+}
+
+// Invalidates checks if enqueuing the current broadcast invalidates a previous broadcast.
+func (b *IntentionalLeave) Invalidates(other memberlist.Broadcast) bool {
+	return false
+}
+
+// Finished is invoked when the message will no longer be broadcasted, either due to invalidation
+// or to the transmit limit being reached.
+func (b *IntentionalLeave) Finished() {}
+
+// UniqueBroadcast is just a marker method for the UniqueBroadcast interface.
+func (b *IntentionalLeave) UniqueBroadcast() {}
+
+// Message returns a byte form of the broadcasted message.
+func (b *IntentionalLeave) Message() []byte {
+	if data, err := json.Marshal(b); err == nil {
+		return data
+	}
+	return []byte("")
 }
 
 // sendHeartbeatToAll sends a heartbeat message to all the other cluster members.
@@ -230,37 +271,16 @@ func (n *Node) sendVoteResponse(candidateid string, grant bool) {
 	}
 }
 
-// sendNewQuorumToAll sends a notification to all cluster members and signals a voluntary
-// leave event. Once memberlist processed the leave event internally, this message is used
-// to trigger an immediate change of the new quorum instead of waiting for the dead node to
-// be kicked.
-func (n *Node) sendNewQuorumToAll(newquorum int) {
-	qrmBytes, _ := json.Marshal(NewQuorum{
+// broadcastIntentionalLeave broadcasts an intentional leave message with the new quorum to all
+// active members of the cluster.
+func (n *Node) broadcastIntentionalLeave(newquorum int) {
+	n.logger.Printf("[DEBUG] raftify: Enqueuing broadcast for quorum update (%v => %v) on intentional leave (active nodes: %v)", n.quorum, newquorum, n.memberlist.NumMembers())
+
+	bcBytes, _ := json.Marshal(IntentionalLeave{
 		NewQuorum: newquorum,
 	})
-	msgBytes, _ := json.Marshal(Message{
-		Type:    NewQuorumMsg,
-		Content: qrmBytes,
+	n.messages.broadcasts.QueueBroadcast(&Message{
+		Content: bcBytes,
+		Type:    IntentionalLeaveMsg,
 	})
-
-	for _, member := range n.memberlist.Members() {
-		if member.Name == n.config.ID {
-			continue
-		}
-		if err := n.memberlist.SendReliable(member, msgBytes); err != nil {
-			n.logger.Printf("[ERR] raftify: couldn't send new quorum to %v: %v\n", member.Name, err.Error())
-			continue
-		}
-		n.logger.Printf("[DEBUG] raftify: Sent new quorum (%v votes) to %v\n", newquorum, member.Name)
-	}
-}
-
-// getNodeByName returns the full Node struct from memberlist to the specified name.
-func (n *Node) getNodeByName(name string) (*memberlist.Node, error) {
-	for _, member := range n.memberlist.Members() {
-		if name == member.Name {
-			return member, nil
-		}
-	}
-	return nil, fmt.Errorf("couldn't find %v in the local memberlist", name)
 }

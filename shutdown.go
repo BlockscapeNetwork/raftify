@@ -2,7 +2,7 @@ package raftify
 
 import (
 	"fmt"
-	"math"
+	"time"
 )
 
 // toShutdown initiates the transition into the shutdown mode. In this mode, the node
@@ -20,9 +20,8 @@ func (n *Node) runShutdown() {
 
 	n.deleteState()
 
-	// Calculate new quorum for new reduced cluster size and send it out.
-	newQuorum := math.Ceil(float64(((len(n.memberlist.Members()) - 1) / 2) + 1))
-	n.sendNewQuorumToAll(int(newQuorum))
+	// Calculate new quorum for new reduced cluster size.
+	newquorum := int(((len(n.memberlist.Members()) - 1) / 2) + 1)
 
 	// Initiate leave event.
 	var errs string
@@ -30,7 +29,19 @@ func (n *Node) runShutdown() {
 		errs += fmt.Sprintf("\t%v\n", err)
 	}
 
-	// Shut down listeners.
+	// Broadcast the new quorum after the leave.
+	n.broadcastIntentionalLeave(newquorum)
+
+	// Before the node shuts down, it needs to give the memberlist some time to broadcast
+	// the message via gossip as it is not instant.
+	n.logger.Println("[INFO] raftify: Shutting down in 3 seconds...")
+	time.Sleep(time.Second)
+	n.logger.Println("[INFO] raftify: Shutting down in 2 seconds...")
+	time.Sleep(time.Second)
+	n.logger.Println("[INFO] raftify: Shutting down in 1 second...")
+	time.Sleep(time.Second)
+
+	// Having broadcasted the new quorum, shut down all listeners.
 	if err := n.memberlist.Shutdown(); err != nil {
 		errs += fmt.Sprintf("\t%v\n", err)
 	}

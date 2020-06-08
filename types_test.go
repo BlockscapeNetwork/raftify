@@ -83,9 +83,9 @@ func TestMessageTypeToString(t *testing.T) {
 		t.Fail()
 	}
 
-	msg = NewQuorumMsg
-	if msg.toString() != "NewQuorumMsg" {
-		t.Logf("Expected to get \"NewQuorumMsg\", instead got %v", msg.toString())
+	msg = IntentionalLeaveMsg
+	if msg.toString() != "IntentionalLeaveMsg" {
+		t.Logf("Expected to get \"IntentionalLeaveMsg\", instead got %v", msg.toString())
 		t.Fail()
 	}
 

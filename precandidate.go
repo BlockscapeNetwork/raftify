@@ -2,9 +2,6 @@ package raftify
 
 import (
 	"encoding/json"
-	"math"
-
-	"github.com/hashicorp/memberlist"
 )
 
 // toPreCandidate initiates the transition of a follower into a precandidate.
@@ -62,13 +59,13 @@ func (n *Node) runPreCandidate() {
 			}
 			n.handleVoteRequest(content)
 
-		case NewQuorumMsg:
-			var content NewQuorum
+		case IntentionalLeaveMsg:
+			var content IntentionalLeave
 			if err := json.Unmarshal(msg.Content, &content); err != nil {
-				n.logger.Printf("[ERR] raftify: error while unmarshaling new quorum message: %v\n", err.Error())
+				n.logger.Printf("[ERR] raftify: error while unmarshaling intentional leave broadcast: %v\n", err.Error())
 				break
 			}
-			n.handleNewQuorum(content)
+			n.handleIntentionalLeave(content)
 
 		default:
 			n.logger.Printf("[WARN] raftify: received %v as precandidate, discarding...\n", msg.Type.toString())
@@ -76,13 +73,21 @@ func (n *Node) runPreCandidate() {
 
 	case <-n.timeoutTimer.C:
 		n.logger.Println("[DEBUG] raftify: Election timeout elapsed")
+
+		// This is mainly to initiate a quorum check for single-node clusters since checks
+		// are done on receivel of a vote by default. This happens for example if expect is
+		// set to 1.
+		if n.quorumReached(n.preVoteList.received) {
+			n.logger.Printf("[INFO] raftify: PreCandidate reached quorum by itself (single-node cluster)")
+			n.toCandidate()
+			return
+		}
+
 		n.toPreCandidate()
 
 		// If only a minorty keeps prevoting and the precandidate quorum cannot be
 		// reached, increment the counter of missed prevote cycles.
-		if !n.quorumReached(n.preVoteList.received) {
-			n.preVoteList.missedPrevoteCycles++
-		}
+		n.preVoteList.missedPrevoteCycles++
 
 		// If the precandidate hasn't reached the prevote quorum too many cycles in a row
 		// it assumes it is partitioned out of the main cluster. In that case, it stops
@@ -96,14 +101,8 @@ func (n *Node) runPreCandidate() {
 			n.toFollower(n.currentTerm)
 		}
 
-	case event := <-n.events.eventCh:
+	case <-n.events.eventCh:
 		n.saveState()
-
-		// Calculate new quorum for new increased cluster size and send it out.
-		if event.Event == memberlist.NodeJoin {
-			newQuorum := math.Ceil(float64((len(n.memberlist.Members()) / 2) + 1))
-			n.sendNewQuorumToAll(int(newQuorum))
-		}
 
 	case <-n.shutdownCh:
 		n.toShutdown()

@@ -37,7 +37,12 @@ func (n *Node) toBootstrap() {
 		if len(n.config.PeerList) == 0 {
 			n.toLeader()
 		} else {
+			n.logger.Printf("[INFO] raftify: Expect is set to 1, but found %v peers. Going through full consensus cycle...", len(n.config.PeerList))
 			n.toFollower(0)
+
+			if err := n.tryJoin(); err != nil {
+				n.logger.Printf("[ERR] raftify: failed to join cluster: %v\nTrying again...\n", err.Error())
+			}
 		}
 
 		n.printMemberlist()

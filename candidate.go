@@ -2,9 +2,6 @@ package raftify
 
 import (
 	"encoding/json"
-	"math"
-
-	"github.com/hashicorp/memberlist"
 )
 
 // toCandidate initiates the transition into a candidate node for the next term. Calling toCandidate
@@ -71,13 +68,13 @@ func (n *Node) runCandidate() {
 			}
 			n.handleVoteResponse(content)
 
-		case NewQuorumMsg:
-			var content NewQuorum
+		case IntentionalLeaveMsg:
+			var content IntentionalLeave
 			if err := json.Unmarshal(msg.Content, &content); err != nil {
-				n.logger.Printf("[ERR] raftify: error while unmarshaling new quorum message: %v\n", err.Error())
+				n.logger.Printf("[ERR] raftify: error while unmarshaling intentional leave broadcast: %v\n", err.Error())
 				break
 			}
-			n.handleNewQuorum(content)
+			n.handleIntentionalLeave(content)
 
 		default:
 			n.logger.Printf("[WARN] raftify: received %v as candidate, discarding...\n", msg.Type.toString())
@@ -88,16 +85,17 @@ func (n *Node) runCandidate() {
 
 	case <-n.timeoutTimer.C:
 		n.logger.Println("[DEBUG] raftify: Election timeout elapsed")
+
+		if n.quorumReached(n.voteList.received) {
+			n.logger.Printf("[INFO] raftify: Candidate reached quorum by itself (single-node cluster)")
+			n.toLeader()
+			return
+		}
+
 		n.toCandidate()
 
-	case event := <-n.events.eventCh:
+	case <-n.events.eventCh:
 		n.saveState()
-
-		// Calculate new quorum for new increased cluster size and send it out.
-		if event.Event == memberlist.NodeJoin {
-			newQuorum := math.Ceil(float64((len(n.memberlist.Members()) / 2) + 1))
-			n.sendNewQuorumToAll(int(newQuorum))
-		}
 
 	case <-n.shutdownCh:
 		n.toShutdown()

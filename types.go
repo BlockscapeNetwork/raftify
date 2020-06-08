@@ -87,10 +87,10 @@ const (
 	// request to the candidate it originated from.
 	VoteResponseMsg
 
-	// A new quorum message is sent by a voluntarily leaving node. It triggers
-	// an immediate quorum change instead of having to wait for the cluster to
-	// detect and kick the dead node eventually.
-	NewQuorumMsg
+	// An intentional leave message is broadcasted by a node leaving on its
+	// own accord. This does not include unintended crash- or timeout-related
+	// leave events.
+	IntentionalLeaveMsg
 )
 
 // toString returns the string representation of a message type.
@@ -108,8 +108,8 @@ func (t *MessageType) toString() string {
 		return "VoteRequestMsg"
 	case VoteResponseMsg:
 		return "VoteResponseMsg"
-	case NewQuorumMsg:
-		return "NewQuorumMsg"
+	case IntentionalLeaveMsg:
+		return "IntentionalLeaveMsg"
 	default:
 		return "unknown"
 	}

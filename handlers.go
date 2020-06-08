@@ -188,13 +188,13 @@ func (n *Node) handleVoteResponse(msg VoteResponse) {
 	}
 }
 
-// handleNewQuorum handles the receivel of a new quorum message from a voluntarily leaving node.
-func (n *Node) handleNewQuorum(msg NewQuorum) {
-	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
+// handleIntentionalNodeEvent handles the receival of an intentional node event broadcast from an
+// intentionally joining or leaving node.
+func (n *Node) handleIntentionalLeave(msg IntentionalLeave) {
+	n.logger.Printf("[DEBUG] raftify: Received quorum update on intentional leave (%v => %v)\n", n.quorum, msg.NewQuorum)
 	n.quorum = msg.NewQuorum
 
-	// Equal to 2, because this check is called just before the second to last node leaves.
-	if len(n.memberlist.Members()) == 2 {
+	if msg.NewQuorum == 1 {
 		n.logger.Printf("[DEBUG] raftify: %v is the only node left in the cluster, entering leader state for term %v...", n.config.ID, n.currentTerm)
 
 		// Switch to leader without calling toLeader in order to bypass the state change restriction
