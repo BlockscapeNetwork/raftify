@@ -102,7 +102,7 @@ func (n *Node) createMemberlist() error {
 	// skipping it so the main loop can be started afterwards. All further join and
 	// leave events are caught in the main loop after this first occurrence.
 	go func() {
-		_ = <-n.events.eventCh
+		<-n.events.eventCh
 	}()
 
 	var err error
@@ -206,7 +206,7 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	// Also, block if the node is trying to rejoin an existing cluster as that will intentionally
 	// skip the bootstrap phase.
 	if node.config.Expect != 1 || node.rejoin {
-		_ = <-node.bootstrapCh
+		<-node.bootstrapCh
 	}
 	return node, nil
 }
