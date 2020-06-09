@@ -58,6 +58,9 @@ func (n *Node) runPreCandidate() {
 				break
 			}
 			n.handleVoteRequest(content)
+
+		default:
+			n.logger.Printf("[WARN] raftify: received %v as precandidate, discarding...\n", msg.Type.toString())
 		}
 
 	case <-n.timeoutTimer.C:
