@@ -65,13 +65,21 @@ func (n *Node) runPreCandidate() {
 
 	case <-n.timeoutTimer.C:
 		n.logger.Println("[DEBUG] raftify: Election timeout elapsed")
+
+		// This is mainly to initiate a quorum check for single-node clusters since checks
+		// are done on receivel of a vote by default. This happens for example if expect is
+		// set to 1.
+		if n.quorumReached(n.preVoteList.received) {
+			n.logger.Printf("[INFO] raftify: PreCandidate reached quorum by itself (single-node cluster)")
+			n.toCandidate()
+			return
+		}
+
 		n.toPreCandidate()
 
 		// If only a minorty keeps prevoting and the precandidate quorum cannot be
 		// reached, increment the counter of missed prevote cycles.
-		if !n.quorumReached(n.preVoteList.received) {
-			n.preVoteList.missedPrevoteCycles++
-		}
+		n.preVoteList.missedPrevoteCycles++
 
 		// If the precandidate hasn't reached the prevote quorum too many cycles in a row
 		// it assumes it is partitioned out of the main cluster. In that case, it stops
