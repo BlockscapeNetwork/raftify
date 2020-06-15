@@ -7,7 +7,7 @@
 
 > :warning: This project has not yet had a security audit or stress test and is therefore not ready for use in production! Use at your own risk!
 
-_Raftify_ is a Go implementation of the Raft leader election algorithm without the Raft log and enables the creation of a self-managing cluster of nodes by transforming an application into a Raft node. It is meant to be a **more cost-efficient** small-scale alternative to running an active/active validator cluster with a separate full-fledged Raft consensus layer.
+_Raftify_ is a Go implementation of the Raft leader election algorithm without the Raft log and enables the creation of a self-managing cluster of nodes by transforming an application into a Raft node. It is meant to be a **more cost-efficient** small-scale alternative to running a validator cluster with a separate full-fledged Raft consensus layer.
 
 It is designed to be directly embedded into an application and provide a direct way of communicating between individual nodes, omitting the overhead caused by replicating a log.
 Raftify was built with one particular use case in mind: **running a self-managing cluster of Cosmos validators**.
