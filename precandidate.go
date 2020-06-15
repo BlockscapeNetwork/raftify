@@ -67,7 +67,7 @@ func (n *Node) runPreCandidate() {
 		n.logger.Println("[DEBUG] raftify: Election timeout elapsed")
 
 		// This is mainly to initiate a quorum check for single-node clusters since checks
-		// are done on receivel of a vote by default. This happens for example if expect is
+		// are done on receival of a vote by default. This happens, for example, if expect is
 		// set to 1.
 		if n.quorumReached(n.preVoteList.received) {
 			n.logger.Printf("[INFO] raftify: PreCandidate reached quorum by itself (single-node cluster)")
