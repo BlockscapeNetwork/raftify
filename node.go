@@ -102,7 +102,7 @@ func (n *Node) createMemberlist() error {
 	// skipping it so the main loop can be started afterwards. All further join and
 	// leave events are caught in the main loop after this first occurrence.
 	go func() {
-		_ = <-n.events.eventCh
+		<-n.events.eventCh
 	}()
 
 	var err error
@@ -206,7 +206,7 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	// Also, block if the node is trying to rejoin an existing cluster as that will intentionally
 	// skip the bootstrap phase.
 	if node.config.Expect != 1 || node.rejoin {
-		_ = <-node.bootstrapCh
+		<-node.bootstrapCh
 	}
 	return node, nil
 }
@@ -246,6 +246,9 @@ func (n *Node) quorumReached(votes int) bool {
 	// a network partition, the quorum of the previous cluster size needs to be reached and thus
 	// no two leaders can exist simultaneously in both partitions. The larger partition will have
 	// a leader, the smaller one won't.
+	// If the node is the only node remaining, it can't fulfil the requirement of also reaching
+	// the previous quorum. In this case, the previous quorum is skipped. This is the only time
+	// this requirement is lifted.
 	n.logger.Printf("[DEBUG] raftify: %v quorum reached: (%v/%v)\n", n.state.toString(), votes, n.quorum)
 	n.quorum = int(len(n.memberlist.Members())/2) + 1
 	return true

@@ -77,6 +77,13 @@ func (n *Node) runCandidate() {
 
 	case <-n.timeoutTimer.C:
 		n.logger.Println("[DEBUG] raftify: Election timeout elapsed")
+
+		if n.quorumReached(n.voteList.received) {
+			n.logger.Printf("[INFO] raftify: Candidate reached quorum by itself (single-node cluster)")
+			n.toLeader()
+			return
+		}
+
 		n.toCandidate()
 
 	case <-n.events.eventCh:
