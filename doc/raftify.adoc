@@ -12,14 +12,11 @@ Raftify takes the leader election algorithm of the Raft consensus and extends it
 
 === Leader Stickiness
 
-The first extension to the default Raft leader election algorithm is the prevote phase which solves the "leader flip-flopping" problem which describes a new leader being elected in quick succession due to the connection breaking down ever so often between two competing leader nodes. Raftify solves this problem by introducing a new node state, making it a total of four: _Leader_, _Follower_, _PreCandidate_ and _Candidate_.
+The Raft consensus holds up pretty well in an optimal scenario. There is, however, a real-world scenario, albeit a corner case, in which it doesn’t hold up so well. This case is described as “flip-flopping” and happens whenever two nodes in the cluster constantly compete for leadership. This can be caused by flaky networks where connectivity between two adjacent nodes (one of which is the current leader) breaks down multiple times for a few seconds.
 
-* A *leader* is the sole managing member of the cluster, in charge of sending out heartbeat messages to the rest of the cluster in order to signal availability.
-* A *follower* is the receiving end of the heartbeat messages a leader sends out. Upon receival, it resets its so-called _election timeout_ (800-1200ms with best performance option) which is the minimum time to wait for a heartbeat message to arrive.
-* A follower turns into a *precandidate* if its election timeout elapses which essentially means that it has not received any sign of availability from the current leader for an extended time period. It then starts collecting prevotes in order to make sure the other nodes haven’t heard back from the leader either and the leader is in fact unavailable, not just from its own perspective but from the other node’s perspective, too.
-* A precandidate turns into a *candidate* once it has collected the majority of prevotes from the cluster members which marks the start signal for a new candidacy. it is now the candidate’s task to collect votes from the majority of cluster members in order to be promoted to the new leader.
+Raftify's first extension solves this problem by means of a prevoting phase which comes with an additional node state: the _PreCandidate_. The prevoting step falls in between the follower and the candidate state and is used to make sure that a new election _is really necessary_. So, once the election timeout on a follower elapses, it won't immediately switch to the candidate state but to the precandidate state. It then starts collecting prevotes in order to make sure the other nodes haven’t heard back from the leader either and the leader is in fact unavailable, not just from its own perspective but from the other nodes’ perspectives, too. If the precandidate reaches a quorum of prevotes, it will switch into the candidate state and initiate a new election cycle.
 
-During an election, each node can only vote for one candidate. A candidate always votes for itself. In order to be elected leader, a candidate must reach a quorum of `(n/2)+1` votes. If no leader can be elected for an extended amount of time, a new candidacy term is started and the process repeats.
+The way the prevoting phase differs from the voting phase is that the rules slightly differ. While candidates do not grant their personal vote to anyone else than themselves and only accept votes from followers, precandidates grant their personal prevote to any precandidate requesting it. If the majority of nodes have become precandidates the latest precandidate will be able to reach the quorum of `(n/2)+1` prevotes and switch into the candidate state.
 
 === Network Partition Tolerance
 
@@ -27,15 +24,15 @@ The second extension Raftify implements is a set of mechanisms that allows the c
 
 ==== Leader Self-Awareness
 
-Network partitions cause connections between nodes to break down and split the cluster into multiple smaller sub-clusters. By default, Raft allows nodes in a sub-cluster to elect a new leader if the quorum of votes needed for promotion can be reached, thus making it possible for more than one leader to be elected at the same time. This poses a huge problem to a validator cluster which must never have more than one leader in order not to double-sign.
+Network partitions cause connections between nodes to break down and split the cluster into multiple smaller sub-clusters. By default, Raft allows nodes in a sub-cluster to elect a new leader if the quorum of votes needed for promotion can be reached, thus making it possible for multiple leaders to coexist in different sub-clusters. In a validator cluster, this is a huge problem as the leader is meant to be the sole node with permission to sign messages, so multiple leaders are a sure-fire way to double-siging.
 
-Raftify solves this problem by means of a _leader quorum_. Every single time a leader sends out heartbeat to all of the other follower nodes, it keeps track of which node has replied in a short time frame (200ms with best performance option). If the leader can't get a quorum of heartbeat replies three times in a row, it will suspect it got split off into a sub-cluster which cannot reach the quorum anymore. This, in turn, means that the other sub-cluster may still be able to reach the quorum and elect a new leader, so it voluntarily steps down after 3x200ms which is before the minimum election timeout of 800ms on any other cluster node runs out, keeping the promise of one single leader at all times.
+Raftify solves this problem by means of a _leader quorum_. Every single time a leader sends out heartbeat to all of the follower nodes, it keeps track of which node has replied in a short time frame (200ms with best performance option). If the leader can't get a quorum of heartbeat replies three times in a row, it will suspect it got split off into a sub-cluster which cannot reach the quorum anymore. This, in turn, means that the other sub-cluster may still be able to reach the quorum and elect a new leader, so it voluntarily steps down after 3x200ms which is before the minimum election timeout of 800ms on any other cluster node runs out, keeping the promise of one single leader at all times at the cost of no leader for a short time frame (at least 200ms with best performance option).
 
 ==== Two-Stage Quorum
 
 Raftify uses hashicorp's memberlist library to manage cluster membership and failure detection which means that it detects unavailable nodes and kicks them after a short period of time, thus enabling dynamic resizing of the cluster for failure-related events. By extension, this dynamically changing cluster size also affects the cluster's quorum. This bears the risk that a long lasting network partition could permanently split a cluster into two independent clusters which would both be able to reach their own quorum and elect their own leader.
 
-This is where the two-stage quorum comes into play. It simply keeps the quorum of the previous cluster size as a requirement for establishing the quorum for the new/reduced cluster size. This way, even split-off partitions with an adjusted cluster size won't be able to elect a new leader.
+This is where the two-stage quorum comes into play. It simply keeps the quorum of the previous cluster size as a requirement for establishing the quorum for the new/reduced cluster size. This way, even split-off partitions with an adjusted cluster size won't be able to elect a new leader for the duration of the partition.
 
 == Limitations
 
@@ -64,7 +61,7 @@ Must be 1 or higher.
 *WARNING:* Please use `expect = 1` for single-node setups only. If you plan on running more than one node, set the `expect` value to the final cluster size on **ALL** nodes. 
 
 |encrypt|string|_(Optional)_ The hex representation of the secret key used to encrypt messages.
-The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256. Use https://www.browserling.com/tools/random-bytes[this tool] to generate a key.
+The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256. https://www.browserling.com/tools/random-bytes[Use this tool to generate a key.]
 
 |performance|int|_(Optional)_ The modifier used to multiply the maximum and minimum timeout and ticker settings. Higher values increase leader stability and reduce bandwidth and CPU but also increase the time needed to recover from a leader failure.
 Must be 1 or higher. Defaults to 1 which is also the maximum performance setting.
