@@ -50,6 +50,10 @@ func TestQuorumReached(t *testing.T) {
 }
 
 func TestSingleNodeClusterWithNoPeers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TestSingleNodeClusterWithNoPeers in short mode")
+	}
+
 	config := Config{
 		ID:       "Node_TestSingleNodeClusterWithNoPeers",
 		MaxNodes: 1,
@@ -85,6 +89,10 @@ func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 }
 
 func TestSingleNodeClusterWithPeers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TestSingleNodeClusterWithPeers in short mode")
+	}
+
 	config := Config{
 		ID:       "Node_TestSingleNodeClusterWithPeers",
 		MaxNodes: 2,
@@ -123,6 +131,10 @@ func TestSingleNodeClusterWithPeers(t *testing.T) {
 }
 
 func TestNode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TestNode in short mode")
+	}
+
 	config := Config{
 		ID:       "Node_TestNode",
 		MaxNodes: 3,
@@ -211,6 +223,10 @@ func TestNode(t *testing.T) {
 }
 
 func TestNodeRejoin(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TestNodeRejoin in short mode")
+	}
+
 	config := Config{
 		ID:       "Node_TestNodeRejoin",
 		MaxNodes: 3,
