@@ -2,7 +2,7 @@
 
 = Raftify Documentation
 
-_Raftify_ is a Go implementation of the Raft leader election algorithm enhanced with an additional prevote phase pointed out in Henrik Ingo’s https://openlife.cc/system/files/4-modifications-for-Raft-consensus.pdf[_Four modifications for the Raft consensus algorithm_] paper. It enables the creation of a self-managing cluster of nodes by transforming an application into a Raft node. Raftify is meant to be a more _cost-efficient_ alternative to running a validator cluster with a separate full-fledged Raft cluster and a permission log.
+_Raftify_ is a Go implementation of the https://raft.github.io/[Raft] leader election algorithm enhanced with an additional prevote phase pointed out in Henrik Ingo’s https://openlife.cc/system/files/4-modifications-for-Raft-consensus.pdf[_Four modifications for the Raft consensus algorithm_] paper. It enables the creation of a self-managing cluster of nodes by transforming an application into a Raft node. Raftify is meant to be a more _cost-efficient_ alternative to running a validator cluster with a separate full-fledged Raft cluster and a permission log.
 
 This Go package is designed to be directly embedded into an application and provide a direct way of communicating between individual nodes, omitting the additional overhead caused by replicating a log.
 
