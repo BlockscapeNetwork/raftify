@@ -27,10 +27,10 @@ func TestAPI(t *testing.T) {
 
 	// Write configuration data to raftify.json file
 	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
+	ioutil.WriteFile(pwd+"/testing/TestNode/raftify.json", nodesBytes, 0755)
 
 	// Test InitNode
-	node, err := InitNode(logger, pwd+"/testing/Node-0")
+	node, err := InitNode(logger, pwd+"/testing/TestNode")
 	if err != nil {
 		t.Logf("Expected node to initialize successfully, instead got error: %v", err.Error())
 		t.FailNow()
