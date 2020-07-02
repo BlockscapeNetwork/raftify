@@ -66,9 +66,8 @@ func (n *Node) runPreCandidate() {
 
 		// If only a minorty keeps prevoting and the precandidate quorum cannot be
 		// reached, increment the counter of missed prevote cycles.
-		if !n.quorumReached(n.preVoteList.received) {
-			n.preVoteList.missedPrevoteCycles++
-		}
+		n.logger.Printf("[DEBUG] raftify: Couldn't reach precandidate quorum: not enough prevotes (%v/%v)", n.preVoteList.received, n.quorum)
+		n.preVoteList.missedPrevoteCycles++
 
 		// If the precandidate hasn't reached the prevote quorum too many cycles in a row
 		// it assumes it is partitioned out of the main cluster. In that case, it stops
