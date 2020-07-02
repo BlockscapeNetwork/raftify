@@ -20,13 +20,15 @@ func TestConfigDefaults(t *testing.T) {
 		logger:     new(log.Logger),
 		workingDir: pwd,
 		config: &Config{
-			ID:       "Node_TestConfigDefaults",
+			ID:       "TestNode",
 			MaxNodes: 3,
 			Expect:   1,
 		},
 	}
 
 	genConfig(node)
+	defer os.Remove(pwd + "/raftify.json")
+
 	if err := node.loadConfig(); err != nil {
 		t.Logf("Expected valid configuration, instead got: %v", err.Error())
 		t.Fail()
@@ -56,8 +58,6 @@ func TestConfigDefaults(t *testing.T) {
 		t.Logf("Expected peer_list to be empty, instead it has %v entries", len(node.config.PeerList))
 		t.Fail()
 	}
-
-	os.Remove(pwd + "/raftify.json")
 }
 
 func TestLoadConfig(t *testing.T) {
@@ -85,11 +85,12 @@ func TestLoadConfig(t *testing.T) {
 
 	// Valid configuration.
 	genConfig(node)
+	defer os.Remove(node.workingDir + "/raftify.json")
+
 	if err := node.loadConfig(); err != nil {
 		t.Logf("Expected valid configuration, instead got: %v", err.Error())
 		t.Fail()
 	}
-	defer os.Remove(pwd + "/raftify.json")
 
 	// Invalid ID.
 	node.config.ID = ""
