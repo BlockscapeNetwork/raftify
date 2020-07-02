@@ -3,34 +3,27 @@ package raftify
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 )
 
 func TestAPI(t *testing.T) {
-	// Setup configuration data
-	config := Config{
-		ID:       "Node_TestAPI",
-		MaxNodes: 1,
-		Expect:   1,
-		LogLevel: "DEBUG",
-		BindAddr: "127.0.0.1",
-		BindPort: 3000,
-	}
-	pwd, _ := os.Getwd()
-	logger := log.New(os.Stderr, "", 0)
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
 
 	// Create directory for test data
-	os.MkdirAll(pwd+"/testing/TestNode", 0755)
-	defer os.RemoveAll(pwd + "/testing")
+	os.MkdirAll(node.workingDir+"/testing/TestNode", 0755)
+	defer os.RemoveAll(node.workingDir + "/testing")
 
 	// Write configuration data to raftify.json file
-	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/TestNode/raftify.json", nodesBytes, 0755)
+	nodesBytes, _ := json.Marshal(node.config)
+	ioutil.WriteFile(node.workingDir+"/testing/TestNode/raftify.json", nodesBytes, 0755)
 
 	// Test InitNode
-	node, err := InitNode(logger, pwd+"/testing/TestNode")
+	node, err := InitNode(node.logger, node.workingDir+"/testing/TestNode")
 	if err != nil {
 		t.Logf("Expected node to initialize successfully, instead got error: %v", err.Error())
 		t.FailNow()
@@ -44,8 +37,8 @@ func TestAPI(t *testing.T) {
 
 	// Test GetMembers
 	members := node.GetMembers()
-	if _, ok := members["Node_TestAPI"]; !ok {
-		t.Log("Expected to find member \"Node_TestAPI\", instead not found")
+	if _, ok := members["TestNode"]; !ok {
+		t.Logf("Expected to find member \"%v\", instead not found", node.config.ID)
 		t.FailNow()
 	}
 	if len(members) != 1 {
@@ -54,8 +47,8 @@ func TestAPI(t *testing.T) {
 	}
 
 	// Test GetID
-	if node.GetID() != "Node_TestAPI" {
-		t.Logf("Expected id to be \"Node_TestAPI\", instead got %v", members["id"])
+	if node.GetID() != "TestNode" {
+		t.Logf("Expected id to be \"%v\", instead got %v", node.config.ID, members["id"])
 		t.FailNow()
 	}
 
@@ -67,7 +60,7 @@ func TestAPI(t *testing.T) {
 
 	// Test Shutdown
 	if err := node.Shutdown(); err != nil {
-		t.Logf("Expected successful shutdown of Node_TestAPI, instead got error: %v", err.Error())
+		t.Logf("Expected successful shutdown of %v, instead got error: %v", node.config.ID, err.Error())
 		t.FailNow()
 	}
 }
