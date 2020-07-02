@@ -79,5 +79,3 @@ make tests
 ```
 
 to run package unit and integration tests.
-
-> :information_source: Code coverage may vary due to the nature of the Raft consensus algorithm as well as fluctuations in network connectivity.
