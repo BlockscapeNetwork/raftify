@@ -35,6 +35,7 @@ func TestRunPreCandidateTimeoutElapsedCase(t *testing.T) {
 	node.createMemberlist()
 	defer node.memberlist.Shutdown()
 
+	node.toPreCandidate()
 	done := make(chan bool)
 
 	go func() {
