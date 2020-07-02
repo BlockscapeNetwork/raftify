@@ -2,7 +2,6 @@ package raftify
 
 import (
 	"testing"
-	"time"
 )
 
 func TestToPreCandidate(t *testing.T) {
@@ -28,21 +27,36 @@ func TestRunPreCandidateTimeoutElapsedCase(t *testing.T) {
 	// Initialize and start dummy node
 	node := initDummyNode("TestNode", 1, 1, ports[0])
 	node.quorum = 1
-	node.preVoteList.received = 1
-	node.preVoteList.missedPrevoteCycles = 4
 
-	node.timeoutTimer.Reset(500 * time.Millisecond)
 	node.createMemberlist()
 	defer node.memberlist.Shutdown()
 
-	node.toPreCandidate()
 	done := make(chan bool)
 
+	// Test quorum reached for single node cluster case
 	go func() {
 		node.runPreCandidate()
 		done <- true
 	}()
 
+	node.toPreCandidate()
+	<-done
+
+	if node.state != Candidate {
+		t.Logf("Expected node to be in the Candidate state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+
+	// Test quorum reached and missed prevote cycles
+	go func() {
+		node.runPreCandidate()
+		done <- true
+	}()
+
+	node.quorum = 2
+	node.preVoteList.missedPrevoteCycles = 4
+
+	node.toPreCandidate()
 	<-done
 
 	if node.preVoteList.missedPrevoteCycles != 0 {
