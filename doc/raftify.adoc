@@ -38,7 +38,7 @@ This is where the two-stage quorum comes into play. It simply keeps the quorum o
 
 * A cluster size of n can tolerate up to `floor((n-1)/2)`` node failures.
 ** Example: A cluster of 5 nodes tolerates `floor((5-1)/2) = 2` node failures.
-* There must never fail more than `floor((n-1)/2)`_` nodes at the same time. Once the failed nodes are kicked out of the memberlist and the size shrinks, the tolerance resets to the new reduced cluster size.
+* There must never fail more than `floor((n-1)/2)` nodes at the same time. Once the failed nodes are kicked out of the memberlist and the size shrinks, the tolerance resets to the new reduced cluster size.
 ** Example 1: If in a cluster of 5 nodes 3 nodes fail in a short time frame, the remaining 2 nodes will never be able to reach the quorum again in order to negotiate a new leader.
 ** Example 2: If in a cluster of 5 nodes 2 nodes fail in a short time frame, the remaining 3 nodes will still be able to reach the quorum in order to negotiate a new leader. The crashed nodes will eventually be kicked from the memberlist, thus shrinking the cluster size to a total of 3 nodes and adjusting its failure tolerance to `floor((3-1)/2) = 1` node.
 
@@ -61,7 +61,8 @@ Must be 1 or higher.
 *WARNING:* Please use `expect = 1` for single-node setups only. If you plan on running more than one node, set the `expect` value to the final cluster size on **ALL** nodes. 
 
 |encrypt|string|_(Optional)_ The hex representation of the secret key used to encrypt messages.
-The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256. https://www.browserling.com/tools/random-bytes[Use this tool to generate a key.]
+The value must be either 16, 24 or 32 bytes to select AES-128, AES-192 or AES-256. https://www.browserling.com/tools/random-bytes[*Use this tool to generate a key.*]
+*IMPORTANT:* Strongly recommended for use in production.
 
 |performance|int|_(Optional)_ The modifier used to multiply the maximum and minimum timeout and ticker settings. Higher values increase leader stability and reduce bandwidth and CPU but also increase the time needed to recover from a leader failure.
 Must be 1 or higher. Defaults to 1 which is also the maximum performance setting.
@@ -110,7 +111,7 @@ are better, and 0 means "totally healthy".
 func (n *Node) GetMembers() map[string]string
 ----
 
-Returns a map of all members listed in the local memberlist with their respective id and address.
+Returns a map of all members listed in the local memberlist with their respective `id` and `address`.
 
 [source,go]
 ----
@@ -126,6 +127,4 @@ Returns the node's current state which is either Leader, Follower, PreCandidate 
 |Current state|Proposed changes|Desired effect
 
 |Intended and unintended leave events are internally handled the same. There’s no difference between a node being shut down and a crashed node leaving the cluster.|Implement custom message to be broadcasted alongside the default events that triggers an immediate change of the cluster size for intended leave events and therefore also the quorum.|Makes sure that only failover scenarios are backed by the constraint of having to reach the quorum of the previous cluster size. A cluster with 2 nodes for example could be shrunk to a single-node cluster and keep running despite the majority of nodes taken offline.
-
-|Once the expected number of nodes are online and the cluster is bootstrapped, the nodes go through the full election process in order to elect their first leader.|Make the first node to start up the first leader on successful bootstrap. This can be measured by how many peers could be reached. If a node reaches no peers, it means that it started up first and thus it will skip the precandidate and candidate states and immediately become the first leader.|This skips the delay associated with the prevoting and voting phase needed to elect the first leader in order to get things going. This saves a few seconds on startup at best, so it’s nice to have.
 |===

@@ -10,6 +10,10 @@
 
 * Fixed a bug that prevented nodes with `expect = 1` from becoming the cluster leader if there were other peers listed in the peerlist of the raftify.json file.
 
+### General Changes
+
+* Bump to memberlist `v0.2.2`
+
 ### Testing
 
 * Added more unit tests for more stable code coverage

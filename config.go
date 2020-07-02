@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/memberlist"
 
@@ -158,7 +159,7 @@ func (c *Config) validate() error {
 	}
 
 	if errs != "" {
-		return fmt.Errorf("found errors in raftify.json:\n%v", errs)
+		return fmt.Errorf("found errors in raftify.json:\n%v", strings.TrimSuffix(errs, "\n"))
 	}
 	return nil
 }
