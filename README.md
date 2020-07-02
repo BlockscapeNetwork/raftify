@@ -78,4 +78,4 @@ Use
 make tests
 ```
 
-to run package unit and integration tests.
+to run unit tests.
