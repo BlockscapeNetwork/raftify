@@ -1,18 +1,11 @@
 package raftify
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"os"
 	"testing"
 )
-
-// Helper function for writing raftify.json file.
-func genConfig(node *Node) {
-	jsonBytes, _ := json.Marshal(node.config)
-	ioutil.WriteFile(node.workingDir+"/raftify.json", jsonBytes, 0755)
-}
 
 func TestConfigDefaults(t *testing.T) {
 	pwd, _ := os.Getwd()
@@ -61,26 +54,16 @@ func TestConfigDefaults(t *testing.T) {
 }
 
 func TestLoadConfig(t *testing.T) {
-	pwd, _ := os.Getwd()
-	config := Config{
-		ID:          "Node_TestLoadConfig",
-		MaxNodes:    3,
-		Encrypt:     "8ba4770b00f703fcc9e7d94f857db0e76fd53178d3d55c3e600a9f0fda9a75ad",
-		Performance: 1,
-		Expect:      1,
-		LogLevel:    "DEBUG",
-		BindAddr:    "0.0.0.0",
-		BindPort:    3000,
-		PeerList: []string{
-			"0.0.0.0:3000",
-			"0.0.0.0:3001",
-			"0.0.0.0:3002",
-		},
-	}
-	node := &Node{
-		logger:     new(log.Logger),
-		workingDir: pwd,
-		config:     &config,
+	// Reserve ports for this test
+	ports := reservePorts(4)
+
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 3, ports[0])
+	node.config.Encrypt = "8ba4770b00f703fcc9e7d94f857db0e76fd53178d3d55c3e600a9f0fda9a75ad"
+	node.config.PeerList = []string{
+		fmt.Sprintf("127.0.0.1:%v", ports[0]),
+		fmt.Sprintf("127.0.0.1:%v", ports[1]),
+		fmt.Sprintf("127.0.0.1:%v", ports[2]),
 	}
 
 	// Valid configuration.
@@ -97,17 +80,17 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid ID, instead %v passed as valid", config.ID)
+		t.Logf("Expected invalid ID, instead %v passed as valid", node.config.ID)
 		t.Fail()
 	}
-	node.config.ID = "Node_TestLoadConfig"
+	node.config.ID = "TestNode"
 
 	// Invalid maximum node limit.
 	node.config.MaxNodes = 0
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid maximum node limit, instead %v passed as valid", config.MaxNodes)
+		t.Logf("Expected invalid maximum node limit, instead %v passed as valid", node.config.MaxNodes)
 		t.Fail()
 	}
 	node.config.MaxNodes = 3
@@ -117,7 +100,7 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid encryption key, instead %v passed as valid", config.Encrypt)
+		t.Logf("Expected invalid encryption key, instead %v passed as valid", node.config.Encrypt)
 		t.Fail()
 	}
 	node.config.Encrypt = "8ba4770b00f703fcc9e7d94f857db0e76fd53178d3d55c3e600a9f0fda9a75ad"
@@ -127,7 +110,7 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid performance, instead %v passed as valid", config.Performance)
+		t.Logf("Expected invalid performance, instead %v passed as valid", node.config.Performance)
 		t.Fail()
 	}
 	node.config.Performance = 1
@@ -137,7 +120,7 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid number of expected nodes, instead %v passed as valid", config.Expect)
+		t.Logf("Expected invalid number of expected nodes, instead %v passed as valid", node.config.Expect)
 		t.Fail()
 	}
 	node.config.Expect = 1
@@ -147,7 +130,7 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid log level, instead %v passed as valid", config.LogLevel)
+		t.Logf("Expected invalid log level, instead %v passed as valid", node.config.LogLevel)
 		t.Fail()
 	}
 	node.config.LogLevel = "DEBUG"
@@ -157,17 +140,17 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid bind address, instead %v passed as valid", config.BindAddr)
+		t.Logf("Expected invalid bind address, instead %v passed as valid", node.config.BindAddr)
 		t.Fail()
 	}
-	node.config.BindAddr = "0.0.0.0"
+	node.config.BindAddr = "127.0.0.1"
 
 	// Invalid port: Too large
 	node.config.BindPort = 123456
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid bind port, instead %v passed as valid", config.BindPort)
+		t.Logf("Expected invalid bind port, instead %v passed as valid", node.config.BindPort)
 		t.Fail()
 	}
 
@@ -176,23 +159,27 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid bind port, instead %v passed as valid", config.BindPort)
+		t.Logf("Expected invalid bind port, instead %v passed as valid", node.config.BindPort)
 		t.Fail()
 	}
-	node.config.BindPort = 3000
+	node.config.BindPort = ports[0]
 
 	// Invalid peerlist: Wrong address format
-	node.config.PeerList = []string{"192.168.500.213:3000", "192.168.0.213:123456", "192.168.0.213;3000"}
+	node.config.PeerList = []string{
+		"192.168.500.213:6000",
+		"192.168.0.213:123456",
+		"192.168.0.213;7000",
+	}
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid peerlist, instead %v passed as valid", config.PeerList)
+		t.Logf("Expected invalid peerlist, instead %v passed as valid", node.config.PeerList)
 		t.Fail()
 	}
 	node.config.PeerList = []string{
-		"0.0.0.0:3000",
-		"0.0.0.0:3001",
-		"0.0.0.0:3002",
+		fmt.Sprintf("127.0.0.1:%v", ports[0]),
+		fmt.Sprintf("127.0.0.1:%v", ports[1]),
+		fmt.Sprintf("127.0.0.1:%v", ports[2]),
 	}
 
 	// Invalid peerlist: Empty list and more than one node expected
@@ -201,50 +188,92 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected error for empty peerlist with more than one expected node, instead %v passed as valid", config.PeerList)
+		t.Logf("Expected error for empty peerlist with more than one expected node, instead %v passed as valid", node.config.PeerList)
 		t.Fail()
 	}
 	node.config.Expect = 1
 
 	// Invalid peerlist: Too many peers for maximum nodes
 	node.config.PeerList = []string{
-		"0.0.0.0:3000", // Local node, will be truncated
-		"0.0.0.0:3001",
-		"0.0.0.0:3002",
-		"0.0.0.0:3003",
+		fmt.Sprintf("127.0.0.1:%v", ports[0]), // Local node, will be truncated
+		fmt.Sprintf("127.0.0.1:%v", ports[1]),
+		fmt.Sprintf("127.0.0.1:%v", ports[2]),
+		fmt.Sprintf("127.0.0.1:%v", ports[3]),
 	}
 
 	if err := node.loadConfig(); err == nil {
-		t.Logf("Expected invalid peerlist with too many peers, instead %v passed as valid", config.PeerList)
+		t.Logf("Expected invalid peerlist with too many peers, instead %v passed as valid", node.config.PeerList)
 		t.Fail()
 	}
 	node.config.PeerList = []string{
-		"0.0.0.0:3000",
-		"0.0.0.0:3001",
-		"0.0.0.0:3002",
+		fmt.Sprintf("127.0.0.1:%v", ports[0]),
+		fmt.Sprintf("127.0.0.1:%v", ports[1]),
+		fmt.Sprintf("127.0.0.1:%v", ports[2]),
 	}
 }
 
-func TestTruncation(t *testing.T) {
-	config := Config{
-		ID:       "Node_TestTruncation",
-		MaxNodes: 3,
-		Expect:   1,
-		BindAddr: "0.0.0.0",
-		BindPort: 3000,
-		PeerList: []string{
-			"0.0.0.0:3000", // Local node
-			"0.0.0.0:3001",
-			"0.0.0.0:3002",
-		},
+func TestLoadConfigRejoin(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(3)
+
+	// Initialize dummy nodes
+	node1 := initDummyNode("TestNode_1", 2, 3, ports[0])
+	node2 := initDummyNode("TestNode_2", 2, 3, ports[1])
+	node3 := initDummyNode("TestNode_3", 1, 3, ports[2])
+
+	genConfig(node1)
+	genConfig(node2)
+	genConfig(node3)
+	defer os.Remove(node1.workingDir + "/raftify.json")
+	defer os.Remove(node2.workingDir + "/raftify.json")
+	defer os.Remove(node3.workingDir + "/raftify.json")
+
+	node2.config.PeerList = []string{fmt.Sprintf("127.0.0.1:%v", node1.config.BindPort)}
+	node3.config.PeerList = []string{fmt.Sprintf("127.0.0.1:%v", node1.config.BindPort)}
+
+	// Starts nodes and form a cluster
+	node1.createMemberlist()
+	node2.createMemberlist()
+	node3.createMemberlist()
+	defer node1.memberlist.Shutdown()
+	defer node2.memberlist.Shutdown()
+	defer node3.memberlist.Shutdown()
+
+	node2.tryJoin()
+	node3.tryJoin()
+
+	// Create dummy state.json file from node1's memberlist into the working directory
+	node1.saveState()
+	defer node1.deleteState()
+
+	// Trigger rejoin and load the config
+	node2.rejoin = true
+	node2.loadConfig()
+
+	if len(node2.config.PeerList) != 2 {
+		t.Logf("Expected peerlist of node2 to have two entries, instead got %v", len(node2.config.PeerList))
+		t.FailNow()
+	}
+}
+
+func TestTruncPeerList(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(3)
+
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 3, ports[0])
+	node.config.PeerList = []string{
+		fmt.Sprintf("127.0.0.1:%v", ports[0]),
+		fmt.Sprintf("127.0.0.1:%v", ports[1]),
+		fmt.Sprintf("127.0.0.1:%v", ports[2]),
 	}
 
-	if err := config.truncPeerList("0.0.0.0:3000"); err != nil {
+	if err := node.config.truncPeerList(fmt.Sprintf("127.0.0.1:%v", ports[0])); err != nil {
 		t.Logf("Expected truncation of peerlist, instead got: %v", err.Error())
 		t.Fail()
 	}
-	if err := config.truncPeerList("0.0.0.0:3000"); err == nil {
-		t.Logf("Expected no truncation of peerlist, instead %v:%v was truncated", config.BindAddr, config.BindPort)
+	if err := node.config.truncPeerList(fmt.Sprintf("127.0.0.1:%v", ports[0])); err == nil {
+		t.Logf("Expected no truncation of peerlist, instead %v:%v was truncated", node.config.BindAddr, node.config.BindPort)
 		t.Fail()
 	}
 }
