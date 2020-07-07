@@ -30,13 +30,13 @@ func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 
-	os.MkdirAll(pwd+"/testing/Node-0", 0755)
+	os.MkdirAll(pwd+"/testing/TestSingleNodeClusterWithNoPeers", 0755)
 	defer os.RemoveAll(pwd + "/testing")
 
 	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
+	ioutil.WriteFile(pwd+"/testing/TestSingleNodeClusterWithNoPeers/raftify.json", nodesBytes, 0755)
 
-	node, err := InitNode(logger, pwd+"/testing/Node-0")
+	node, err := InitNode(logger, pwd+"/testing/TestSingleNodeClusterWithNoPeers")
 	if err != nil {
 		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
 		t.FailNow()
@@ -75,13 +75,13 @@ func TestSingleNodeClusterWithPeers(t *testing.T) {
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 
-	os.MkdirAll(pwd+"/testing/Node-0", 0755)
+	os.MkdirAll(pwd+"/testing/TestSingleNodeClusterWithPeers", 0755)
 	defer os.RemoveAll(pwd + "/testing")
 
 	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
+	ioutil.WriteFile(pwd+"/testing/TestSingleNodeClusterWithPeers/raftify.json", nodesBytes, 0755)
 
-	node, err := InitNode(logger, pwd+"/testing/Node-0")
+	node, err := InitNode(logger, pwd+"/testing/TestSingleNodeClusterWithPeers")
 	if err != nil {
 		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
 		t.FailNow()
@@ -124,19 +124,19 @@ func TestNode(t *testing.T) {
 	nodes := []*Node{}
 
 	for i := 0; i < config.MaxNodes; i++ {
-		os.MkdirAll(fmt.Sprintf("%v/testing/Node-%v", pwd, i), 0755)
+		os.MkdirAll(fmt.Sprintf("%v/testing/TestNode-%v", pwd, i), 0755)
 		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
 
-		config.ID = fmt.Sprintf("Node-%v", i)
+		config.ID = fmt.Sprintf("TestNode-%v", i)
 		config.BindPort = ports[i]
 
 		nodesBytes, _ := json.Marshal(config)
-		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
+		ioutil.WriteFile(fmt.Sprintf("%v/testing/TestNode-%v/raftify.json", pwd, i), nodesBytes, 0755)
 
 		go func(pwd string, i int) {
-			node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
+			node, err := InitNode(logger, fmt.Sprintf("%v/testing/TestNode-%v", pwd, i))
 			if err != nil {
-				t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
+				t.Logf("Expected successful initialization of TestNode-%v, instead got error: %v", i, err.Error())
 				t.FailNow()
 			}
 
@@ -150,7 +150,7 @@ func TestNode(t *testing.T) {
 	// Check if every node is out of bootstrap mode
 	for i, node := range nodes {
 		if node.state == Bootstrap {
-			t.Logf("Expected Node-%v to be bootstrapped, instead it is still in bootstrap state", i)
+			t.Logf("Expected TestNode-%v to be bootstrapped, instead it is still in bootstrap state", i)
 			t.FailNow()
 		}
 	}
@@ -159,7 +159,7 @@ func TestNode(t *testing.T) {
 	for i, node := range nodes {
 		if node.state == Leader {
 			if err := node.Shutdown(); err != nil {
-				t.Logf("Expected successful shutdown of Node-%v, instead got error: %v", i, err.Error())
+				t.Logf("Expected successful shutdown of TestNode-%v, instead got error: %v", i, err.Error())
 				t.FailNow()
 			}
 			nodes = append(nodes[:i], nodes[i+1:]...)
@@ -187,7 +187,7 @@ func TestNode(t *testing.T) {
 
 	for i, node := range nodes {
 		if err := node.Shutdown(); err != nil {
-			t.Logf("Expected successful shutdown of Node-%v, instead got error: %v", i, err.Error())
+			t.Logf("Expected successful shutdown of TestNode-%v, instead got error: %v", i, err.Error())
 			t.FailNow()
 		}
 	}
@@ -219,7 +219,7 @@ func TestNodeRejoin(t *testing.T) {
 	nodes := []*Node{}
 
 	for i := 0; i < config.MaxNodes; i++ {
-		os.MkdirAll(fmt.Sprintf("%v/testing/Node-%v", pwd, i), 0755)
+		os.MkdirAll(fmt.Sprintf("%v/testing/TestNodeRejoin-%v", pwd, i), 0755)
 		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
 
 		// Before the last node is initialized, the state.json file from another
@@ -228,14 +228,14 @@ func TestNodeRejoin(t *testing.T) {
 			// Wait for the other nodes to fully initialize
 			time.Sleep(2 * time.Second)
 
-			src, err := os.Open(fmt.Sprintf("%v/testing/Node-%v/state.json", pwd, i-1))
+			src, err := os.Open(fmt.Sprintf("%v/testing/TestNodeRejoin-%v/state.json", pwd, i-1))
 			if err != nil {
 				t.Logf("Expected state.json to be opened, instead got error: %v", err.Error())
 				t.FailNow()
 			}
 			defer src.Close()
 
-			dest, err := os.Create(fmt.Sprintf("%v/testing/Node-%v/state.json", pwd, i))
+			dest, err := os.Create(fmt.Sprintf("%v/testing/TestNodeRejoin-%v/state.json", pwd, i))
 			if err != nil {
 				t.Logf("Expected state.json to be created, instead got error: %v", err.Error())
 				t.FailNow()
@@ -248,16 +248,16 @@ func TestNodeRejoin(t *testing.T) {
 			}
 		}
 
-		config.ID = fmt.Sprintf("Node-%v", i)
+		config.ID = fmt.Sprintf("TestNodeRejoin-%v", i)
 		config.BindPort = ports[i]
 
 		nodesBytes, _ := json.Marshal(config)
-		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
+		ioutil.WriteFile(fmt.Sprintf("%v/testing/TestNodeRejoin-%v/raftify.json", pwd, i), nodesBytes, 0755)
 
 		go func(pwd string, i int) {
-			node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
+			node, err := InitNode(logger, fmt.Sprintf("%v/testing/TestNodeRejoin-%v", pwd, i))
 			if err != nil {
-				t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
+				t.Logf("Expected successful initialization of TestNodeRejoin-%v, instead got error: %v", i, err.Error())
 				t.FailNow()
 			}
 
