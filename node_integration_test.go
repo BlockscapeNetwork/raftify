@@ -26,7 +26,7 @@ func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 		BindPort: ports[0],
 	}
 
-	// Initialize node.
+	// Initialize node
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 
@@ -71,7 +71,7 @@ func TestSingleNodeClusterWithPeers(t *testing.T) {
 		},
 	}
 
-	// Initialize node.
+	// Initialize node
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 
@@ -113,12 +113,12 @@ func TestNode(t *testing.T) {
 		BindPort: ports[0],
 	}
 
-	// Populate peerlist.
+	// Populate peerlist
 	for i := 0; i < config.MaxNodes; i++ {
 		config.PeerList = append(config.PeerList, fmt.Sprintf("127.0.0.1:%v", ports[i]))
 	}
 
-	// Initialize all nodes.
+	// Initialize all nodes
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 	nodes := []*Node{}
@@ -144,10 +144,10 @@ func TestNode(t *testing.T) {
 		}(pwd, i)
 	}
 
-	// Wait for bootstrap to kick in for a leader to be elected.
+	// Wait for bootstrap to kick in for a leader to be elected
 	time.Sleep(2 * time.Second)
 
-	// Check if every node is out of bootstrap mode.
+	// Check if every node is out of bootstrap mode
 	for i, node := range nodes {
 		if node.state == Bootstrap {
 			t.Logf("Expected Node-%v to be bootstrapped, instead it is still in bootstrap state", i)
@@ -155,7 +155,7 @@ func TestNode(t *testing.T) {
 		}
 	}
 
-	// Test leader leave event.
+	// Test leader leave event
 	for i, node := range nodes {
 		if node.state == Leader {
 			if err := node.Shutdown(); err != nil {
@@ -171,10 +171,10 @@ func TestNode(t *testing.T) {
 		}
 	}
 
-	// Wait for a new leader to be elected.
+	// Wait for a new leader to be elected
 	time.Sleep(2 * time.Second)
 
-	// Check if a new leader exists.
+	// Check if a new leader exists
 	for i, node := range nodes {
 		if node.state == Leader {
 			break
@@ -208,12 +208,12 @@ func TestNodeRejoin(t *testing.T) {
 		BindPort: ports[0],
 	}
 
-	// Populate peerlist.
+	// Populate peerlist
 	for i := 0; i < config.MaxNodes; i++ {
 		config.PeerList = append(config.PeerList, fmt.Sprintf("127.0.0.1:%v", ports[i]))
 	}
 
-	// Initialize all nodes except one normally.
+	// Initialize all nodes except one normally
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 	nodes := []*Node{}
@@ -225,7 +225,7 @@ func TestNodeRejoin(t *testing.T) {
 		// Before the last node is initialized, the state.json file from another
 		// node is first copied into its directory to trigger the rejoin.
 		if i == config.MaxNodes-1 {
-			// Wait for the other nodes to fully initialize.
+			// Wait for the other nodes to fully initialize
 			time.Sleep(2 * time.Second)
 
 			src, err := os.Open(fmt.Sprintf("%v/testing/Node-%v/state.json", pwd, i-1))
@@ -265,10 +265,10 @@ func TestNodeRejoin(t *testing.T) {
 		}(pwd, i)
 	}
 
-	// Wait for bootstrap to kick in for a leader to be elected.
+	// Wait for bootstrap to kick in for a leader to be elected
 	time.Sleep(2 * time.Second)
 
-	// Check whether the node has successfully rejoined.
+	// Check whether the node has successfully rejoined
 	if nodes[config.MaxNodes-1].rejoin {
 		t.Logf("Expected rejoin flag to be false, instead it's true")
 		t.FailNow()
