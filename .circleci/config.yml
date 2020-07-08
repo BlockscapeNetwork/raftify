@@ -23,7 +23,7 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
-      - run: make tests
+      - run: make unit-tests
       - run: bash <(curl -s https://codecov.io/bash)
       - run: mkdir -p /tmp/artifacts
       - run: mv coverage.html /tmp/artifacts

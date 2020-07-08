@@ -3,41 +3,125 @@ package raftify
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/memberlist"
 )
 
-func TestQuorumReached(t *testing.T) {
-	node := &Node{
-		state:  Candidate,
-		logger: log.New(os.Stderr, "", 0),
-		quorum: 2,
-	}
+func TestMemberlist(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
 
-	var err error
-	if node.memberlist, err = memberlist.Create(memberlist.DefaultWANConfig()); err != nil {
-		t.Logf("Expected creation of memberlist, instead got error: %v", err.Error())
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+
+	if err := node.createMemberlist(); err != nil {
+		t.Logf("Expected successful creation of memberlist, instead got error: %v", err.Error())
 		t.FailNow()
 	}
+	if err := node.memberlist.Shutdown(); err != nil {
+		t.Logf("Expected successful shutdown of memberlist, instead got error: %v", err.Error())
+		t.FailNow()
+	}
+}
+
+func ExampleNode_printMemberlist() {
+	node := initDummyNode("TestNode", 1, 1, 4000)
+	node.createMemberlist()
+	node.printMemberlist()
+	// Output:
+	// [INFO] raftify: ->[] TestNode [127.0.0.1:4000] joined the cluster.
+	// [INFO] raftify: The cluster has currently 1 members:
+	// [INFO] raftify: - TestNode [127.0.0.1]
+}
+
+func TestInitNodeAndShutdown(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+	tdir := fmt.Sprintf("%v/testing/TestNode", node.workingDir)
+
+	os.MkdirAll(tdir, 0755)
+	defer os.RemoveAll(fmt.Sprintf("%v/testing", node.workingDir))
+
+	configBytes, _ := json.Marshal(node.config)
+	ioutil.WriteFile(fmt.Sprintf("%v/raftify.json", tdir), configBytes, 0755)
+
+	node, err := initNode(node.logger, tdir)
+	if err != nil {
+		t.Logf("Expected successful initialization of node, instead got error: %v", err.Error())
+		t.FailNow()
+	}
+	if err = node.Shutdown(); err != nil {
+		t.Logf("Expected successful shutdown of node, instead got error: %v", err.Error())
+		t.FailNow()
+	}
+}
+
+func TestResetTimeout(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+	node.timeoutTimer = time.NewTimer(time.Second)
+	node.timeoutTimer.Stop()
+
+	start := time.Now()
+	node.resetTimeout()
+	end := <-node.timeoutTimer.C
+
+	if end.Sub(start) > ((MaxTimeout*time.Duration(node.config.Performance)+10)*time.Millisecond) || time.Since(start) < (800*time.Duration(node.config.Performance)*time.Millisecond) {
+		t.Logf("Expected timeout to elapse after %v-%vms, instead it took %vms", node.config.Performance*MinTimeout, node.config.Performance*MaxTimeout, time.Since(start))
+		t.FailNow()
+	}
+
+	node.config.Performance = 2
+
+	start = time.Now()
+	node.resetTimeout()
+	end = <-node.timeoutTimer.C
+
+	if end.Sub(start) > ((MaxTimeout*time.Duration(node.config.Performance)+10)*time.Millisecond) || time.Since(start) < (800*time.Duration(node.config.Performance)*time.Millisecond) {
+		t.Logf("Expected timeout to elapse after %v-%vms, instead it took %vms", node.config.Performance*MinTimeout, node.config.Performance*MaxTimeout, time.Since(start))
+		t.FailNow()
+	}
+}
+
+func TestStartMessageTicker(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+	node.messageTicker = time.NewTicker(time.Millisecond)
+
+	select {
+	case <-node.messageTicker.C:
+		node.messageTicker.Stop()
+	case <-time.After(210 * time.Millisecond):
+		t.Logf("Expected message ticker to have been called after 200ms, instead nothing happened")
+		t.FailNow()
+	}
+}
+
+func TestQuorum(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+	node.quorum = 2
+	node.createMemberlist()
 
 	if node.quorumReached(1) {
-		t.Log("Expected quorum not to be reached, instead it was marked as true")
+		t.Log("Expected first quorum check to return false, instead got true")
 		t.FailNow()
 	}
-	if node.quorum != 2 {
-		t.Logf("Expected quorum to remain 2, instead got %v", node.quorum)
-		t.FailNow()
-	}
-
-	node.quorum = 2
 	if !node.quorumReached(2) {
-		t.Log("Expected quorum to be reached, instead it was marked as false")
+		t.Log("Expected second quorum check to return true, instead got false")
 		t.FailNow()
 	}
 	if node.quorum != 1 {
@@ -45,249 +129,8 @@ func TestQuorumReached(t *testing.T) {
 		t.FailNow()
 	}
 
-	node.memberlist.Leave(0)
-	node.memberlist.Shutdown()
-}
-
-func TestSingleNodeClusterWithNoPeers(t *testing.T) {
-	config := Config{
-		ID:       "Node_TestSingleNodeClusterWithNoPeers",
-		MaxNodes: 1,
-		Expect:   1,
-		BindPort: 3000,
-	}
-
-	// Initialize node.
-	pwd, _ := os.Getwd()
-	logger := log.New(os.Stderr, "", 0)
-
-	os.MkdirAll(pwd+"/testing/Node-0", 0755)
-	defer os.RemoveAll(pwd + "/testing")
-
-	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
-
-	node, err := InitNode(logger, pwd+"/testing/Node-0")
-	if err != nil {
-		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
+	if err := node.memberlist.Shutdown(); err != nil {
+		t.Logf("Expected successful shutdown, instead got error: %v", err.Error())
 		t.FailNow()
-	}
-
-	if node.GetState() != Leader {
-		t.Logf("Expected node in single-node cluster to switch to leader immediately, instead it's in the %v state", node.state.toString())
-		t.FailNow()
-	}
-
-	if err := node.Shutdown(); err != nil {
-		t.Logf("Expected successful shutdown of Node_TestSingleNodeClusterWithNoPeers, instead got error: %v", err.Error())
-		t.FailNow()
-	}
-}
-
-func TestSingleNodeClusterWithPeers(t *testing.T) {
-	config := Config{
-		ID:       "Node_TestSingleNodeClusterWithPeers",
-		MaxNodes: 2,
-		Expect:   1,
-		BindPort: 3000,
-		PeerList: []string{
-			"0.0.0.0:3001",
-		},
-	}
-
-	// Initialize node.
-	pwd, _ := os.Getwd()
-	logger := log.New(os.Stderr, "", 0)
-
-	os.MkdirAll(pwd+"/testing/Node-0", 0755)
-	defer os.RemoveAll(pwd + "/testing")
-
-	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
-
-	node, err := InitNode(logger, pwd+"/testing/Node-0")
-	if err != nil {
-		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
-		t.FailNow()
-	}
-
-	if node.GetState() == Leader {
-		t.Log("Expected node in single-node cluster not to switch to leader immediately, instead it's in the leader state right away")
-		t.FailNow()
-	}
-
-	if err := node.Shutdown(); err != nil {
-		t.Logf("Expected successful shutdown of Node_TestSingleNodeClusterWithPeers, instead got error: %v", err.Error())
-		t.FailNow()
-	}
-}
-
-func TestNode(t *testing.T) {
-	config := Config{
-		ID:       "Node_TestNode",
-		MaxNodes: 3,
-		Expect:   3,
-		BindPort: 3000,
-	}
-
-	// Populate peerlist.
-	for i := 0; i < config.MaxNodes; i++ {
-		config.PeerList = append(config.PeerList, fmt.Sprintf("0.0.0.0:%v", 3000+i))
-	}
-
-	// Initialize all nodes.
-	pwd, _ := os.Getwd()
-	logger := log.New(os.Stderr, "", 0)
-	nodes := []*Node{}
-
-	for i := 0; i < config.MaxNodes; i++ {
-		os.MkdirAll(fmt.Sprintf("%v/testing/Node-%v", pwd, i), 0755)
-		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
-
-		config.ID = fmt.Sprintf("Node-%v", i)
-		config.BindPort = 3000 + i
-
-		nodesBytes, _ := json.Marshal(config)
-		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
-
-		go func(pwd string, i int) {
-			node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
-			if err != nil {
-				t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
-				t.FailNow()
-			}
-
-			nodes = append(nodes, node)
-		}(pwd, i)
-	}
-
-	// Wait for bootstrap to kick in for a leader to be elected.
-	time.Sleep(2 * time.Second)
-
-	// Check if every node is out of bootstrap mode.
-	for i, node := range nodes {
-		if node.state == Bootstrap {
-			t.Logf("Expected Node-%v to be bootstrapped, instead it is still in bootstrap state", i)
-			t.FailNow()
-		}
-	}
-
-	// Test leader leave event.
-	for i, node := range nodes {
-		if node.state == Leader {
-			if err := node.Shutdown(); err != nil {
-				t.Logf("Expected successful shutdown of Node-%v, instead got error: %v", i, err.Error())
-				t.FailNow()
-			}
-			nodes = append(nodes[:i], nodes[i+1:]...)
-			break
-		}
-		if i == len(nodes)-1 {
-			t.Log("Expected to find a leader and shut it down, instead couldn't find a leader")
-			t.FailNow()
-		}
-	}
-
-	// Wait for a new leader to be elected.
-	time.Sleep(2 * time.Second)
-
-	// Check if a new leader exists.
-	for i, node := range nodes {
-		if node.state == Leader {
-			break
-		}
-		if i == len(nodes)-1 {
-			t.Log("Expected a new leader to be elected after previous one left, instead couldn't find a leader")
-			t.FailNow()
-		}
-	}
-
-	for i, node := range nodes {
-		if err := node.Shutdown(); err != nil {
-			t.Logf("Expected successful shutdown of Node-%v, instead got error: %v", i, err.Error())
-			t.FailNow()
-		}
-	}
-}
-
-func TestNodeRejoin(t *testing.T) {
-	config := Config{
-		ID:       "Node_TestNodeRejoin",
-		MaxNodes: 3,
-		Expect:   2,
-		BindPort: 3000,
-	}
-
-	// Populate peerlist.
-	for i := 0; i < config.MaxNodes; i++ {
-		config.PeerList = append(config.PeerList, fmt.Sprintf("0.0.0.0:%v", 3000+i))
-	}
-
-	// Initialize all nodes except one normally.
-	pwd, _ := os.Getwd()
-	logger := log.New(os.Stderr, "", 0)
-	nodes := []*Node{}
-
-	for i := 0; i < config.MaxNodes; i++ {
-		os.MkdirAll(fmt.Sprintf("%v/testing/Node-%v", pwd, i), 0755)
-		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
-
-		// Before the last node is initialized, the state.json file from another
-		// node is first copied into its directory to trigger the rejoin.
-		if i == config.MaxNodes-1 {
-			// Wait for the other nodes to fully initialize.
-			time.Sleep(2 * time.Second)
-
-			src, err := os.Open(fmt.Sprintf("%v/testing/Node-%v/state.json", pwd, i-1))
-			if err != nil {
-				t.Logf("Expected state.json to be opened, instead got error: %v", err.Error())
-				t.FailNow()
-			}
-			defer src.Close()
-
-			dest, err := os.Create(fmt.Sprintf("%v/testing/Node-%v/state.json", pwd, i))
-			if err != nil {
-				t.Logf("Expected state.json to be created, instead got error: %v", err.Error())
-				t.FailNow()
-			}
-			defer dest.Close()
-
-			if _, err := io.Copy(dest, src); err != nil {
-				t.Logf("Expected successful copy, instead got error: %v", err.Error())
-				t.FailNow()
-			}
-		}
-
-		config.ID = fmt.Sprintf("Node-%v", i)
-		config.BindPort = 3000 + i
-
-		nodesBytes, _ := json.Marshal(config)
-		ioutil.WriteFile(fmt.Sprintf("%v/testing/Node-%v/raftify.json", pwd, i), nodesBytes, 0755)
-
-		go func(pwd string, i int) {
-			node, err := InitNode(logger, fmt.Sprintf("%v/testing/Node-%v", pwd, i))
-			if err != nil {
-				t.Logf("Expected successful initialization of Node-%v, instead got error: %v", i, err.Error())
-				t.FailNow()
-			}
-
-			nodes = append(nodes, node)
-		}(pwd, i)
-	}
-
-	// Wait for bootstrap to kick in for a leader to be elected.
-	time.Sleep(2 * time.Second)
-
-	// Check whether the node has successfully rejoined.
-	if nodes[config.MaxNodes-1].rejoin {
-		t.Logf("Expected rejoin flag to be false, instead it's true")
-		t.FailNow()
-	}
-
-	for _, node := range nodes {
-		if err := node.Shutdown(); err != nil {
-			t.Logf("Expected successful shutdown of Node_TestNode, instead got error: %v", err.Error())
-			t.FailNow()
-		}
 	}
 }

@@ -3,42 +3,42 @@ package raftify
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 )
 
 func TestAPI(t *testing.T) {
-	config := Config{
-		ID:       "Node_TestAPI",
-		MaxNodes: 1,
-		Expect:   1,
-		LogLevel: "DEBUG",
-		BindPort: 3000,
-	}
-	pwd, _ := os.Getwd()
-	logger := log.New(os.Stderr, "", 0)
+	// Reserve ports for this test
+	ports := reservePorts(1)
 
-	os.MkdirAll(pwd+"/testing/Node-0", 0755)
-	defer os.RemoveAll(pwd + "/testing")
+	// Initialize dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
 
-	nodesBytes, _ := json.Marshal(config)
-	ioutil.WriteFile(pwd+"/testing/Node-0/raftify.json", nodesBytes, 0755)
+	// Create directory for test data
+	os.MkdirAll(node.workingDir+"/testing/TestNode", 0755)
+	defer os.RemoveAll(node.workingDir + "/testing")
 
-	node, err := InitNode(logger, pwd+"/testing/Node-0")
+	// Write configuration data to raftify.json file
+	nodesBytes, _ := json.Marshal(node.config)
+	ioutil.WriteFile(node.workingDir+"/testing/TestNode/raftify.json", nodesBytes, 0755)
+
+	// Test InitNode
+	node, err := InitNode(node.logger, node.workingDir+"/testing/TestNode")
 	if err != nil {
 		t.Logf("Expected node to initialize successfully, instead got error: %v", err.Error())
 		t.FailNow()
 	}
 
+	// Test GetHealthScore
 	if node.GetHealthScore() != 0 {
 		t.Logf("Expected node to reach a health score of 0, instead got %v", node.GetHealthScore())
 		t.FailNow()
 	}
 
+	// Test GetMembers
 	members := node.GetMembers()
-	if _, ok := members["Node_TestAPI"]; !ok {
-		t.Log("Expected to find member \"Node_TestAPI\", instead not found")
+	if _, ok := members["TestNode"]; !ok {
+		t.Logf("Expected to find member \"%v\", instead not found", node.config.ID)
 		t.FailNow()
 	}
 	if len(members) != 1 {
@@ -46,18 +46,21 @@ func TestAPI(t *testing.T) {
 		t.FailNow()
 	}
 
-	if node.GetID() != "Node_TestAPI" {
-		t.Logf("Expected id to be \"Node_TestAPI\", instead got %v", members["id"])
+	// Test GetID
+	if node.GetID() != "TestNode" {
+		t.Logf("Expected id to be \"%v\", instead got %v", node.config.ID, members["id"])
 		t.FailNow()
 	}
 
+	// Test GetState
 	if node.GetState() != Leader {
 		t.Logf("Expected node to be leader, instead got %v", node.state.toString())
 		t.FailNow()
 	}
 
+	// Test Shutdown
 	if err := node.Shutdown(); err != nil {
-		t.Logf("Expected successful shutdown of Node_TestAPI, instead got error: %v", err.Error())
+		t.Logf("Expected successful shutdown of %v, instead got error: %v", node.config.ID, err.Error())
 		t.FailNow()
 	}
 }

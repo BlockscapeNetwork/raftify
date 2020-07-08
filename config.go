@@ -192,6 +192,7 @@ func (n *Node) loadConfig() error {
 
 		n.config.PeerList = []string{}
 		localNode := fmt.Sprintf("%v:%v", n.config.BindAddr, n.config.BindPort)
+
 		for _, node := range list {
 			if node.Address() == localNode {
 				continue
