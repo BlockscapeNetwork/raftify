@@ -16,6 +16,7 @@ type Message struct {
 // Heartbeat defines the message sent out by the leader to all cluster members.
 type Heartbeat struct {
 	Term        uint64 `json:"term"`
+	Quorum      int    `json:"quorum"`
 	HeartbeatID uint64 `json:"heartbeat_id"`
 	LeaderID    string `json:"leader_id"`
 }
@@ -63,6 +64,7 @@ func (n *Node) sendHeartbeatToAll() {
 	hb := Heartbeat{
 		HeartbeatID: n.heartbeatIDList.currentHeartbeatID,
 		Term:        n.currentTerm,
+		Quorum:      n.quorum,
 		LeaderID:    n.config.ID,
 	}
 
