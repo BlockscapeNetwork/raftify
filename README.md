@@ -77,7 +77,7 @@ All that is left to do now is to build Gaia. For more information on how to do t
 Use
 
 ```go
-make tests
+make unit-tests
 ```
 
 to run unit tests.
