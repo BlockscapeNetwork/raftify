@@ -103,6 +103,8 @@ func TestNode(t *testing.T) {
 		t.Skip("Skipping TestNode in short mode")
 	}
 
+	errorCh := make(chan error)
+
 	// Reserve ports for this test
 	ports := reservePorts(3)
 
@@ -110,7 +112,6 @@ func TestNode(t *testing.T) {
 		ID:       "Node_TestNode",
 		MaxNodes: 3,
 		Expect:   3,
-		BindPort: ports[0],
 	}
 
 	// Populate peerlist
@@ -136,12 +137,22 @@ func TestNode(t *testing.T) {
 		go func(pwd string, i int) {
 			node, err := InitNode(logger, fmt.Sprintf("%v/testing/TestNode-%v", pwd, i))
 			if err != nil {
-				t.Logf("Expected successful initialization of TestNode-%v, instead got error: %v", i, err.Error())
-				t.FailNow()
+				errorCh <- err
+				return
 			}
 
 			nodes = append(nodes, node)
+			errorCh <- nil
 		}(pwd, i)
+
+		time.Sleep(time.Second)
+	}
+
+	for i := 0; i < config.MaxNodes; i++ {
+		if err := <-errorCh; err != nil {
+			t.Logf("Expected successful initialization of TestNode-%v, instead got error: %v", i, err.Error())
+			t.FailNow()
+		}
 	}
 
 	// Wait for bootstrap to kick in for a leader to be elected
@@ -198,6 +209,8 @@ func TestNodeRejoin(t *testing.T) {
 		t.Skip("Skipping TestNodeRejoin in short mode")
 	}
 
+	errorCh := make(chan error)
+
 	// Reserve ports for this test
 	ports := reservePorts(3)
 
@@ -205,7 +218,6 @@ func TestNodeRejoin(t *testing.T) {
 		ID:       "Node_TestNodeRejoin",
 		MaxNodes: 3,
 		Expect:   2,
-		BindPort: ports[0],
 	}
 
 	// Populate peerlist
@@ -257,12 +269,22 @@ func TestNodeRejoin(t *testing.T) {
 		go func(pwd string, i int) {
 			node, err := InitNode(logger, fmt.Sprintf("%v/testing/TestNodeRejoin-%v", pwd, i))
 			if err != nil {
-				t.Logf("Expected successful initialization of TestNodeRejoin-%v, instead got error: %v", i, err.Error())
-				t.FailNow()
+				errorCh <- err
+				return
 			}
 
 			nodes = append(nodes, node)
+			errorCh <- nil
 		}(pwd, i)
+
+		time.Sleep(time.Second)
+	}
+
+	for i := 0; i < config.MaxNodes; i++ {
+		if err := <-errorCh; err != nil {
+			t.Logf("Expected successful initialization of TestNodeRejoin-%v, instead got error: %v", i, err.Error())
+			t.FailNow()
+		}
 	}
 
 	// Wait for bootstrap to kick in for a leader to be elected
