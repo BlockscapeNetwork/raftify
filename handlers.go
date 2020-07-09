@@ -6,6 +6,9 @@ import (
 
 // handleHeartbeat handles the receival of a heartbeat message from a leader.
 func (n *Node) handleHeartbeat(msg Heartbeat) {
+	// Adjust quorum in any case
+	n.quorum = msg.Quorum
+
 	switch n.state {
 	case Follower:
 		if n.currentTerm < msg.Term {
