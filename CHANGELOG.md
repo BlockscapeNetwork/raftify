@@ -9,6 +9,7 @@
 ### Bugfixes
 
 * Fixed a bug that prevented nodes with `expect = 1` from becoming the cluster leader if there were other peers listed in the peerlist of the raftify.json file.
+* Fixed a bug that prevented the prevote quorum from being adjusted to the new cluster size.
 
 ### General Changes
 
