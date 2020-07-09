@@ -80,4 +80,10 @@ Use
 make unit-tests
 ```
 
-to run unit tests.
+to run unit tests, and
+
+```go
+make integration-tests
+```
+
+to run integration tests.
