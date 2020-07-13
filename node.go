@@ -112,6 +112,19 @@ func (n *Node) createMemberlist() error {
 	return nil
 }
 
+// tryJoin attempts to join an existing cluster via one of its peers listed in the peerlist.
+// If no peers can be reached the node is started and waits to be bootstrapped.
+func (n *Node) tryJoin() error {
+	n.logger.Println("[DEBUG] raftify: Trying to join existing cluster via peers...")
+	numPeers, err := n.memberlist.Join(n.config.PeerList)
+	if err != nil {
+		return err
+	}
+
+	n.logger.Printf("[DEBUG] raftify: %v peers are currently available ✓\n", numPeers)
+	return nil
+}
+
 // printMemberlist prints out the local memberlist into the console log.
 func (n *Node) printMemberlist() {
 	n.logger.Printf("[INFO] raftify: The cluster has currently %v members:\n", len(n.memberlist.Members()))
