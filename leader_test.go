@@ -51,6 +51,7 @@ func TestRunLeaderTickerCase(t *testing.T) {
 	node := initDummyNode("TestNode", 1, 1, ports[0])
 	node.quorum = 1
 	node.heartbeatIDList.received = 1
+
 	node.createMemberlist()
 	defer node.memberlist.Shutdown()
 
@@ -102,10 +103,6 @@ func TestRunLeaderTickerCase(t *testing.T) {
 	node.messageTicker = time.NewTicker(10 * time.Millisecond)
 	<-done
 
-	if !node.rejoin {
-		t.Logf("Expected rejoin flag to be set to true, instead got %v", node.rejoin)
-		t.FailNow()
-	}
 	if node.heartbeatIDList.currentHeartbeatID != 0 {
 		t.Logf("Expected current heartbeat id to be 0, instead got %v", node.heartbeatIDList.currentHeartbeatID)
 		t.FailNow()
@@ -114,8 +111,8 @@ func TestRunLeaderTickerCase(t *testing.T) {
 		t.Logf("Expected subQuorumCycles to be reset to 0, instead got %v", node.heartbeatIDList.subQuorumCycles)
 		t.FailNow()
 	}
-	if node.state != Follower {
-		t.Logf("Expected node to be in the Follower state, instead got %v", node.state.toString())
+	if node.state != Rejoin {
+		t.Logf("Expected node to be in the Rejoin state, instead got %v", node.state.toString())
 		t.FailNow()
 	}
 }

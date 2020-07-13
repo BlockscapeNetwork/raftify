@@ -3,9 +3,21 @@ package raftify
 import "testing"
 
 func TestStateToString(t *testing.T) {
-	state := Bootstrap
+	state := Initialize
+	if state.toString() != "Initialize" {
+		t.Logf("Expected to get \"Initialize\", instead got %v", state.toString())
+		t.Fail()
+	}
+
+	state = Bootstrap
 	if state.toString() != "Bootstrap" {
 		t.Logf("Expected to get \"Bootstrap\", instead got %v", state.toString())
+		t.Fail()
+	}
+
+	state = Rejoin
+	if state.toString() != "Rejoin" {
+		t.Logf("Expected to get \"Rejoin\", instead got %v", state.toString())
 		t.Fail()
 	}
 

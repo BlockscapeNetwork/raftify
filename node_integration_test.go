@@ -36,11 +36,7 @@ func TestSingleNodeClusterWithNoPeers(t *testing.T) {
 	nodesBytes, _ := json.Marshal(config)
 	ioutil.WriteFile(pwd+"/testing/TestSingleNodeClusterWithNoPeers/raftify.json", nodesBytes, 0755)
 
-	node, err := InitNode(logger, pwd+"/testing/TestSingleNodeClusterWithNoPeers")
-	if err != nil {
-		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
-		t.FailNow()
-	}
+	node, _ := InitNode(logger, pwd+"/testing/TestSingleNodeClusterWithNoPeers")
 
 	if node.GetState() != Leader {
 		t.Logf("Expected node in single-node cluster to switch to leader immediately, instead it's in the %v state", node.state.toString())
@@ -81,11 +77,7 @@ func TestSingleNodeClusterWithPeers(t *testing.T) {
 	nodesBytes, _ := json.Marshal(config)
 	ioutil.WriteFile(pwd+"/testing/TestSingleNodeClusterWithPeers/raftify.json", nodesBytes, 0755)
 
-	node, err := InitNode(logger, pwd+"/testing/TestSingleNodeClusterWithPeers")
-	if err != nil {
-		t.Logf("Expected successful initialization of single-node cluster, instead got error: %v", err.Error())
-		t.FailNow()
-	}
+	node, _ := InitNode(logger, pwd+"/testing/TestSingleNodeClusterWithPeers")
 
 	if node.GetState() == Leader {
 		t.Log("Expected node in single-node cluster not to switch to leader immediately, instead it's in the leader state right away")
@@ -102,8 +94,6 @@ func TestNode(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping TestNode in short mode")
 	}
-
-	errorCh := make(chan error)
 
 	// Reserve ports for this test
 	ports := reservePorts(3)
@@ -135,24 +125,11 @@ func TestNode(t *testing.T) {
 		ioutil.WriteFile(fmt.Sprintf("%v/testing/TestNode-%v/raftify.json", pwd, i), nodesBytes, 0755)
 
 		go func(pwd string, i int) {
-			node, err := InitNode(logger, fmt.Sprintf("%v/testing/TestNode-%v", pwd, i))
-			if err != nil {
-				errorCh <- err
-				return
-			}
-
+			node, _ := InitNode(logger, fmt.Sprintf("%v/testing/TestNode-%v", pwd, i))
 			nodes = append(nodes, node)
-			errorCh <- nil
 		}(pwd, i)
 
 		time.Sleep(time.Second)
-	}
-
-	for i := 0; i < config.MaxNodes; i++ {
-		if err := <-errorCh; err != nil {
-			t.Logf("Expected successful initialization of TestNode-%v, instead got error: %v", i, err.Error())
-			t.FailNow()
-		}
 	}
 
 	// Wait for bootstrap to kick in for a leader to be elected
@@ -209,8 +186,6 @@ func TestNodeRejoin(t *testing.T) {
 		t.Skip("Skipping TestNodeRejoin in short mode")
 	}
 
-	errorCh := make(chan error)
-
 	// Reserve ports for this test
 	ports := reservePorts(3)
 
@@ -235,7 +210,8 @@ func TestNodeRejoin(t *testing.T) {
 		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
 
 		// Before the last node is initialized, the state.json file from another
-		// node is first copied into its directory to trigger the rejoin.
+		// node is first copied into its directory to trigger the rejoin. It then
+		// blocks until it successfully rejoins another node.
 		if i == config.MaxNodes-1 {
 			// Wait for the other nodes to fully initialize
 			time.Sleep(2 * time.Second)
@@ -267,32 +243,19 @@ func TestNodeRejoin(t *testing.T) {
 		ioutil.WriteFile(fmt.Sprintf("%v/testing/TestNodeRejoin-%v/raftify.json", pwd, i), nodesBytes, 0755)
 
 		go func(pwd string, i int) {
-			node, err := InitNode(logger, fmt.Sprintf("%v/testing/TestNodeRejoin-%v", pwd, i))
-			if err != nil {
-				errorCh <- err
-				return
-			}
-
+			node, _ := InitNode(logger, fmt.Sprintf("%v/testing/TestNodeRejoin-%v", pwd, i))
 			nodes = append(nodes, node)
-			errorCh <- nil
 		}(pwd, i)
 
 		time.Sleep(time.Second)
-	}
-
-	for i := 0; i < config.MaxNodes; i++ {
-		if err := <-errorCh; err != nil {
-			t.Logf("Expected successful initialization of TestNodeRejoin-%v, instead got error: %v", i, err.Error())
-			t.FailNow()
-		}
 	}
 
 	// Wait for bootstrap to kick in for a leader to be elected
 	time.Sleep(2 * time.Second)
 
 	// Check whether the node has successfully rejoined
-	if nodes[config.MaxNodes-1].rejoin {
-		t.Logf("Expected rejoin flag to be false, instead it's true")
+	if nodes[config.MaxNodes-1].state != Follower {
+		t.Logf("Expected node to be in the Follower state, instead got: %v", nodes[config.MaxNodes-1].state.toString())
 		t.FailNow()
 	}
 
