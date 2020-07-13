@@ -165,7 +165,7 @@ func (c *Config) validate() error {
 }
 
 // loadConfig loads the contents of the raftify.json file into memory.
-func (n *Node) loadConfig() error {
+func (n *Node) loadConfig(rejoin bool) error {
 	configJSON, err := os.Open(n.workingDir + "/raftify.json")
 	if err != nil {
 		return err
@@ -182,7 +182,7 @@ func (n *Node) loadConfig() error {
 
 	// If the node needs to rejoin, overwrite the peerlist from the raftify.json
 	// with the memberlist persisted in the state.json file.
-	if n.rejoin {
+	if rejoin {
 		n.logger.Println("[DEBUG] raftify: Preparing to rejoin the cluster...")
 
 		list, err := n.loadState()

@@ -58,21 +58,6 @@ func (n *Node) runFollower() {
 
 	case <-n.timeoutTimer.C:
 		n.logger.Println("[DEBUG] raftify: Heartbeat timeout elapsed")
-		if n.rejoin {
-			// Keep trying to rejoin the cluster.
-			if err := n.tryJoin(); err != nil {
-				n.logger.Printf("[ERR] raftify: couldn't rejoin cluster: %v\n", err.Error())
-				n.resetTimeout()
-				break
-			}
-
-			// If rejoin was successful, set flag accordingly.
-			n.rejoin = false
-			n.logger.Println("[DEBUG] raftify: Successfully rejoined the cluster ✓")
-
-			// Signal successful bootstrap and allow InitNode to return.
-			n.bootstrapCh <- true
-		}
 		n.toPreCandidate()
 
 	case <-n.events.eventCh:

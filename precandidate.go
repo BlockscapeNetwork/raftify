@@ -88,9 +88,8 @@ func (n *Node) runPreCandidate() {
 		// it successfully rejoined the cluster.
 		if n.preVoteList.missedPrevoteCycles >= 5 {
 			n.logger.Printf("[DEBUG] raftify: %v prevote cycles have passed without any response, preparing rejoin...\n", n.preVoteList.missedPrevoteCycles)
-			n.rejoin = true
 			n.preVoteList.missedPrevoteCycles = 0
-			n.toFollower(n.currentTerm)
+			n.toRejoin(false)
 		}
 
 	case <-n.events.eventCh:

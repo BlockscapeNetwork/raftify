@@ -118,12 +118,7 @@ func (n *Node) sendHeartbeatResponse(leaderid string, heartbeatid uint64) {
 }
 
 // sendPreVoteRequestToAll sends a pre vote request message to all cluster members.
-// If the node has a state.json it will use prevote requests as a means to rejoin the cluster.
 func (n *Node) sendPreVoteRequestToAll() {
-	if n.rejoin {
-		n.tryJoin()
-	}
-
 	reqBytes, _ := json.Marshal(PreVoteRequest{
 		NextTerm:       n.currentTerm + 1,
 		PreCandidateID: n.config.ID,
