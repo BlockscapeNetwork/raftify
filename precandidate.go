@@ -89,7 +89,7 @@ func (n *Node) runPreCandidate() {
 		if n.preVoteList.missedPrevoteCycles >= 5 {
 			n.logger.Printf("[DEBUG] raftify: %v prevote cycles have passed without any response, preparing rejoin...\n", n.preVoteList.missedPrevoteCycles)
 			n.preVoteList.missedPrevoteCycles = 0
-			n.toRejoin(false)
+			n.toRejoin()
 		}
 
 	case <-n.events.eventCh:

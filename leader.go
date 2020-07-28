@@ -93,7 +93,7 @@ func (n *Node) runLeader() {
 				// It therefore needs to try rejoining the cluster in order to receive the latest
 				// memberlist in case anything has changed during its absence in the other
 				// sub-cluster.
-				n.toRejoin(false)
+				n.toRejoin()
 				break
 			}
 		} else {
