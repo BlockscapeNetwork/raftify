@@ -3,7 +3,6 @@ package raftify
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -186,9 +185,8 @@ func TestNodeRejoin(t *testing.T) {
 		t.Skip("Skipping TestNodeRejoin in short mode")
 	}
 
-	// Reserve ports for this test
+	// Reserve ports for this test and configure nodes
 	ports := reservePorts(3)
-
 	config := Config{
 		ID:       "Node_TestNodeRejoin",
 		MaxNodes: 3,
@@ -200,7 +198,7 @@ func TestNodeRejoin(t *testing.T) {
 		config.PeerList = append(config.PeerList, fmt.Sprintf("127.0.0.1:%v", ports[i]))
 	}
 
-	// Initialize all nodes except one normally
+	// Initialize all nodes
 	pwd, _ := os.Getwd()
 	logger := log.New(os.Stderr, "", 0)
 	nodes := []*Node{}
@@ -208,33 +206,6 @@ func TestNodeRejoin(t *testing.T) {
 	for i := 0; i < config.MaxNodes; i++ {
 		os.MkdirAll(fmt.Sprintf("%v/testing/TestNodeRejoin-%v", pwd, i), 0755)
 		defer os.RemoveAll(fmt.Sprintf("%v/testing", pwd))
-
-		// Before the last node is initialized, the state.json file from another
-		// node is first copied into its directory to trigger the rejoin. It then
-		// blocks until it successfully rejoins another node.
-		if i == config.MaxNodes-1 {
-			// Wait for the other nodes to fully initialize
-			time.Sleep(2 * time.Second)
-
-			src, err := os.Open(fmt.Sprintf("%v/testing/TestNodeRejoin-%v/state.json", pwd, i-1))
-			if err != nil {
-				t.Logf("Expected state.json to be opened, instead got error: %v", err.Error())
-				t.FailNow()
-			}
-			defer src.Close()
-
-			dest, err := os.Create(fmt.Sprintf("%v/testing/TestNodeRejoin-%v/state.json", pwd, i))
-			if err != nil {
-				t.Logf("Expected state.json to be created, instead got error: %v", err.Error())
-				t.FailNow()
-			}
-			defer dest.Close()
-
-			if _, err := io.Copy(dest, src); err != nil {
-				t.Logf("Expected successful copy, instead got error: %v", err.Error())
-				t.FailNow()
-			}
-		}
 
 		config.ID = fmt.Sprintf("TestNodeRejoin-%v", i)
 		config.BindPort = ports[i]
@@ -253,12 +224,26 @@ func TestNodeRejoin(t *testing.T) {
 	// Wait for bootstrap to kick in for a leader to be elected
 	time.Sleep(2 * time.Second)
 
-	// Check whether the node has successfully rejoined
-	if nodes[config.MaxNodes-1].state != Follower {
-		t.Logf("Expected node to be in the Follower state, instead got: %v", nodes[config.MaxNodes-1].state.toString())
-		t.FailNow()
+	// Make leader trigger transition into rejoin state
+	for _, node := range nodes {
+		if node.state == Leader {
+			node.toRejoin()
+			break
+		}
 	}
 
+	// Wait for the rejoin to be resolved
+	time.Sleep(3 * time.Second)
+
+	// Check if rejoin has been resolved
+	for _, node := range nodes {
+		if node.state != Follower && node.state != PreCandidate && node.state != Candidate && node.state != Leader {
+			t.Logf("Expected rejoin situation to be resolved, instead found %v to be in the %v state", node.config.ID, node.state.toString())
+			t.FailNow()
+		}
+	}
+
+	// Shut down all nodes
 	for _, node := range nodes {
 		if err := node.Shutdown(); err != nil {
 			t.Logf("Expected successful shutdown of Node_TestNode, instead got error: %v", err.Error())
