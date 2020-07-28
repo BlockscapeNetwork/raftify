@@ -27,6 +27,8 @@ func (n *Node) toBootstrap() {
 			n.logger.Printf("[INFO] raftify: Expecting 1 node, but found %v peers. Going through full leader election cycle...", len(n.config.PeerList))
 			n.toFollower(0)
 
+			// Try joining one of the peers only once. If none can be reached, it just continues
+			// operation as a follower anc gradually works its way up to becoming the leader.
 			if err := n.tryJoin(); err != nil {
 				n.logger.Printf("[ERR] raftify: failed to join cluster: %v\nTrying again...\n", err.Error())
 			}
