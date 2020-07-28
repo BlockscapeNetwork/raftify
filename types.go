@@ -5,13 +5,9 @@ type State uint8
 
 // Constants for valid node states.
 const (
-	// Initialize is the state attributed to the InitNode method. It is used to distinguish
-	// between rejoins triggerd during startup and during operation.
-	Initialize State = iota
-
 	// Bootstrap is the state a node is in if it's waiting for the expected number of
 	// nodes to go online before starting the Raft leader election.
-	Bootstrap
+	Bootstrap State = iota
 
 	// Rejoin is the state a node is in if it times out or crashes and restarts.
 	// In this state, it attempts to rejoin the existing cluster it dropped out of.
@@ -49,8 +45,6 @@ const (
 // toString returns the string representation of a node state.
 func (s *State) toString() string {
 	switch *s {
-	case Initialize:
-		return "Initialize"
 	case Bootstrap:
 		return "Bootstrap"
 	case Rejoin:
