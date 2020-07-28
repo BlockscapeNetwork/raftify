@@ -165,7 +165,7 @@ func (c *Config) validate() error {
 }
 
 // loadConfig loads the contents of the raftify.json file into memory.
-func (n *Node) loadConfig(rejoin bool) error {
+func (n *Node) loadConfig(stateJSONExists bool) error {
 	configJSON, err := os.Open(n.workingDir + "/raftify.json")
 	if err != nil {
 		return err
@@ -180,10 +180,10 @@ func (n *Node) loadConfig(rejoin bool) error {
 		return err
 	}
 
-	// If the node needs to rejoin, overwrite the peerlist from the raftify.json
+	// If the state.json file exists, overwrite the peerlist from the raftify.json
 	// with the memberlist persisted in the state.json file.
-	if rejoin {
-		n.logger.Println("[DEBUG] raftify: Preparing to rejoin the cluster...")
+	if stateJSONExists {
+		n.logger.Println("[DEBUG] raftify: Overwriting peerlist with peers from state.json...")
 
 		list, err := n.loadState()
 		if err != nil {
