@@ -22,7 +22,7 @@ func TestConfigDefaults(t *testing.T) {
 	genConfig(node)
 	defer os.Remove(pwd + "/raftify.json")
 
-	if err := node.loadConfig(); err != nil {
+	if err := node.loadConfig(false); err != nil {
 		t.Logf("Expected valid configuration, instead got: %v", err.Error())
 		t.Fail()
 	}
@@ -70,7 +70,7 @@ func TestLoadConfig(t *testing.T) {
 	genConfig(node)
 	defer os.Remove(node.workingDir + "/raftify.json")
 
-	if err := node.loadConfig(); err != nil {
+	if err := node.loadConfig(false); err != nil {
 		t.Logf("Expected valid configuration, instead got: %v", err.Error())
 		t.Fail()
 	}
@@ -79,7 +79,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.ID = ""
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid ID, instead %v passed as valid", node.config.ID)
 		t.Fail()
 	}
@@ -89,7 +89,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.MaxNodes = 0
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid maximum node limit, instead %v passed as valid", node.config.MaxNodes)
 		t.Fail()
 	}
@@ -99,7 +99,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.Encrypt = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid encryption key, instead %v passed as valid", node.config.Encrypt)
 		t.Fail()
 	}
@@ -109,7 +109,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.Performance = -1
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid performance, instead %v passed as valid", node.config.Performance)
 		t.Fail()
 	}
@@ -119,7 +119,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.Expect = -1
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid number of expected nodes, instead %v passed as valid", node.config.Expect)
 		t.Fail()
 	}
@@ -129,7 +129,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.LogLevel = "DEBUNK"
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid log level, instead %v passed as valid", node.config.LogLevel)
 		t.Fail()
 	}
@@ -139,7 +139,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.BindAddr = "192.168.500.213"
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid bind address, instead %v passed as valid", node.config.BindAddr)
 		t.Fail()
 	}
@@ -149,7 +149,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.BindPort = 123456
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid bind port, instead %v passed as valid", node.config.BindPort)
 		t.Fail()
 	}
@@ -158,7 +158,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.BindPort = -1
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid bind port, instead %v passed as valid", node.config.BindPort)
 		t.Fail()
 	}
@@ -172,7 +172,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid peerlist, instead %v passed as valid", node.config.PeerList)
 		t.Fail()
 	}
@@ -187,7 +187,7 @@ func TestLoadConfig(t *testing.T) {
 	node.config.PeerList = []string{}
 	genConfig(node)
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected error for empty peerlist with more than one expected node, instead %v passed as valid", node.config.PeerList)
 		t.Fail()
 	}
@@ -201,7 +201,7 @@ func TestLoadConfig(t *testing.T) {
 		fmt.Sprintf("127.0.0.1:%v", ports[3]),
 	}
 
-	if err := node.loadConfig(); err == nil {
+	if err := node.loadConfig(false); err == nil {
 		t.Logf("Expected invalid peerlist with too many peers, instead %v passed as valid", node.config.PeerList)
 		t.Fail()
 	}
@@ -247,8 +247,7 @@ func TestLoadConfigRejoin(t *testing.T) {
 	defer node1.deleteState()
 
 	// Trigger rejoin and load the config
-	node2.rejoin = true
-	node2.loadConfig()
+	node2.loadConfig(true)
 
 	if len(node2.config.PeerList) != 2 {
 		t.Logf("Expected peerlist of node2 to have two entries, instead got %v", len(node2.config.PeerList))

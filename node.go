@@ -19,11 +19,6 @@ type Node struct {
 	// The term the node is currently at. Increases monotonically.
 	currentTerm uint64
 
-	// Flag which signals if a node has been partitioned out into a minority sub-cluster
-	// or has simply crashed/timed out and needs to initiate a rejoin in order to check
-	// whether there have been any changes to the memberlist during its absence.
-	rejoin bool
-
 	// The number of nodes making up the majority of nodes in the cluster needed to agree
 	// on a decision to make it binding, e.g. the election of a leader.
 	quorum int
@@ -112,6 +107,19 @@ func (n *Node) createMemberlist() error {
 	return nil
 }
 
+// tryJoin attempts to join an existing cluster via one of its peers listed in the peerlist.
+// If no peers can be reached the node is started and waits to be bootstrapped.
+func (n *Node) tryJoin() error {
+	n.logger.Println("[DEBUG] raftify: Trying to join existing cluster via peers...")
+	numPeers, err := n.memberlist.Join(n.config.PeerList)
+	if err != nil {
+		return err
+	}
+
+	n.logger.Printf("[DEBUG] raftify: %v peers are currently available ✓\n", numPeers)
+	return nil
+}
+
 // printMemberlist prints out the local memberlist into the console log.
 func (n *Node) printMemberlist() {
 	n.logger.Printf("[INFO] raftify: The cluster has currently %v members:\n", len(n.memberlist.Members()))
@@ -165,17 +173,28 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	// and therefore must have been partitioned out or crashed/timed out. At this point, it
 	// is no longer guaranteed its memberlist is up-to-date and it therefore needs to initiate
 	// a rejoin to see if there were any changes to the cluster during its absence.
-	if _, err := os.Stat(workingDir + "/state.json"); err == nil {
-		node.logger.Println("[DEBUG] raftify: Found state.json, setting up rejoin...")
-		node.rejoin = true
-	} else if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("[DEBUG] raftify: %v", err.Error())
-	}
+	_, fileErr := os.Stat(workingDir + "/state.json")
+	if fileErr == nil { // Found state.json
+		node.logger.Println("[DEBUG] raftify: Loading peers from state.json...")
 
-	// If rejoin is true, the memberlist from the state.json is loaded into the config
-	// in place of the peerlist from the raftify.json file.
-	if err := node.loadConfig(); err != nil {
-		return nil, fmt.Errorf("[ERR] raftify: %v", err.Error())
+		// If state.json was found, the true passed into the loadConfig method indicated that
+		// the memberlist from the state.json is loaded into the config in place of the
+		// peerlist from the raftify.json file.
+		if err := node.loadConfig(true); err != nil {
+			return nil, fmt.Errorf("[ERR] raftify: %v", err.Error())
+		}
+	} else { // Didn't find state.json
+		node.logger.Println("[DEBUG] raftify: Loading peers from raftify.json...")
+
+		// Make sure the file error is not related to the state.json not existing
+		if !os.IsNotExist(fileErr) {
+			return nil, fmt.Errorf("[DEBUG] raftify: %v", fileErr.Error())
+		}
+
+		// Load the config normally
+		if err := node.loadConfig(false); err != nil {
+			return nil, fmt.Errorf("[ERR] raftify: %v", err.Error())
+		}
 	}
 
 	// Allocate enough memory for the event channel to accommodate for the self-imposed number
@@ -184,8 +203,8 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 
 	// Create the local memberlist that initially only contains the local node. It is used to
 	// keep track of cluster membership.
-	if err := node.createMemberlist(); err != nil {
-		return nil, fmt.Errorf("[ERR] raftify: %v", err.Error())
+	if listErr := node.createMemberlist(); listErr != nil {
+		return nil, fmt.Errorf("[ERR] raftify: %v", listErr.Error())
 	}
 
 	// The first quorum is determined by the number of expected nodes specified in the raftify.json.
@@ -193,19 +212,15 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 
 	node.logger.Printf("[DEBUG] raftify: %v successfully initialized ✓\n", node.config.ID)
 
-	if node.rejoin {
-		node.toFollower(0)
-	} else {
-		node.toBootstrap()
-	}
+	// Initialize the bootstrap phase
+	node.toBootstrap()
 
+	// Run the main loop
 	go node.runLoop()
 
-	// Block until cluster has been successfully bootstrapped. Both toBootstrap and toFollower are
-	// able to unblock. Don't block if expect is set to 1 since that will be bootstrapped immediately.
-	// Also, block if the node is trying to rejoin an existing cluster as that will intentionally
-	// skip the bootstrap phase.
-	if node.config.Expect != 1 || node.rejoin {
+	// Block until cluster has been successfully bootstrapped. toBootstrap is able to unblock.
+	// Don't block if expect is set to 1 since that will be bootstrapped immediately.
+	if node.config.Expect != 1 {
 		<-node.bootstrapCh
 	}
 	return node, nil
@@ -260,6 +275,8 @@ func (n *Node) runLoop() {
 		switch n.state {
 		case Bootstrap:
 			n.runBootstrap()
+		case Rejoin:
+			n.runRejoin()
 		case Follower:
 			n.runFollower()
 		case PreCandidate:

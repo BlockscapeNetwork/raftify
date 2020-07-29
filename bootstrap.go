@@ -4,19 +4,6 @@ import (
 	"time"
 )
 
-// tryJoin attempts to join an existing cluster via one of its peers listed in the peerlist.
-// If no peers can be reached the node is started and waits to be bootstrapped.
-func (n *Node) tryJoin() error {
-	n.logger.Println("[DEBUG] raftify: Trying to join existing cluster via peers...")
-	numPeers, err := n.memberlist.Join(n.config.PeerList)
-	if err != nil {
-		return err
-	}
-
-	n.logger.Printf("[DEBUG] raftify: %v peers are currently available ✓\n", numPeers)
-	return nil
-}
-
 // toBootstrap initiates the transition into the bootstrap mode. In this mode, nodes wait for
 // the expected number of nodes specified in the expect field of the raftify.json to go online
 // and start all nodes of the cluster at the same time.
@@ -40,6 +27,8 @@ func (n *Node) toBootstrap() {
 			n.logger.Printf("[INFO] raftify: Expecting 1 node, but found %v peers. Going through full leader election cycle...", len(n.config.PeerList))
 			n.toFollower(0)
 
+			// Try joining one of the peers only once. If none can be reached, it just continues
+			// operation as a follower anc gradually works its way up to becoming the leader.
 			if err := n.tryJoin(); err != nil {
 				n.logger.Printf("[ERR] raftify: failed to join cluster: %v\nTrying again...\n", err.Error())
 			}

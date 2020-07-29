@@ -9,6 +9,12 @@ func TestStateToString(t *testing.T) {
 		t.Fail()
 	}
 
+	state = Rejoin
+	if state.toString() != "Rejoin" {
+		t.Logf("Expected to get \"Rejoin\", instead got %v", state.toString())
+		t.Fail()
+	}
+
 	state = Follower
 	if state.toString() != "Follower" {
 		t.Logf("Expected to get \"Follower\", instead got %v", state.toString())

@@ -63,12 +63,8 @@ func TestRunPreCandidateTimeoutElapsedCase(t *testing.T) {
 		t.Logf("Expected missedPrevoteCycles to be 0, instead got %v", node.preVoteList.missedPrevoteCycles)
 		t.FailNow()
 	}
-	if !node.rejoin {
-		t.Logf("Expected the rejoin flag to be set to true, instead got %v", node.rejoin)
-		t.FailNow()
-	}
-	if node.state != Follower {
-		t.Logf("Expected node to be in the Follower state, instead got %v", node.state.toString())
+	if node.state != Rejoin {
+		t.Logf("Expected node to be in the Rejoin state, instead got %v", node.state.toString())
 		t.FailNow()
 	}
 }

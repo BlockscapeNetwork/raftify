@@ -78,25 +78,22 @@ func (n *Node) runLeader() {
 			if n.heartbeatIDList.subQuorumCycles >= MaxSubQuorumCycles {
 				n.logger.Println("[DEBUG] raftify: Too many cycles without reaching leader quorum, stepping down as leader...")
 
-				// If at any point the leader doesn't receive enough heartbeat responses anymore
-				// it is safe to assume it has been partitioned out into a smaller sub-cluster.
-				// It therefore needs to try to rejoin the cluster in order to receive the latest
-				// memberlist in case anything has changed during its absence in the other
-				// sub-cluster.
-				n.rejoin = true
-
 				// Reset heartbeat and quorum counter.
 				n.heartbeatIDList.currentHeartbeatID = 0
 				n.heartbeatIDList.subQuorumCycles = 0
 
 				// Reload the config so that the memberlist from the state.json is loaded into
 				// the peerlist.
-				if err := n.loadConfig(); err != nil {
+				if err := n.loadConfig(true); err != nil {
 					n.logger.Printf("[ERR] raftify: %v, fall back to raftify.json\n", err.Error())
 				}
 
 				// Step down as a leader if too many cycles have passed without reaching quorum.
-				n.toFollower(n.currentTerm)
+				// Here, it is safe to assume it has been partitioned out into a smaller sub-cluster.
+				// It therefore needs to try rejoining the cluster in order to receive the latest
+				// memberlist in case anything has changed during its absence in the other
+				// sub-cluster.
+				n.toRejoin()
 				break
 			}
 		} else {

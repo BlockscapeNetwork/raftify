@@ -9,6 +9,10 @@ const (
 	// nodes to go online before starting the Raft leader election.
 	Bootstrap State = iota
 
+	// Rejoin is the state a node is in if it times out or crashes and restarts.
+	// In this state, it attempts to rejoin the existing cluster it dropped out of.
+	Rejoin
+
 	// Followers reset their timeout if they receive a heartbeat message from a leader.
 	// If the timeout elapses, they become a precandidate.
 	Follower
@@ -43,6 +47,8 @@ func (s *State) toString() string {
 	switch *s {
 	case Bootstrap:
 		return "Bootstrap"
+	case Rejoin:
+		return "Rejoin"
 	case Follower:
 		return "Follower"
 	case PreCandidate:
