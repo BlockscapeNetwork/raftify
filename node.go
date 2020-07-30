@@ -12,6 +12,9 @@ import (
 
 // Node contains core attributes that every node has regardless of node state.
 type Node struct {
+	// The node's version info.
+	versionInfo VersionInfo
+
 	// The state the node is currently in; can be Follower, PreCandidate, Candidate
 	// or Leader.
 	state State
@@ -128,6 +131,12 @@ func (n *Node) printMemberlist() {
 	}
 }
 
+// printVersionInfo prints out the Raftify and go version the node is running on.
+func (n *Node) printVersionInfo() {
+	vi := n.versionInfo.GetVersionInfo()
+	n.logger.Printf("[INFO] raftify: Running %v %v (%v)...", vi.Name, vi.Version, vi.GoVersion)
+}
+
 // initNode initializes a new raftified node.
 func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	node := &Node{
@@ -168,6 +177,9 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 		pending:             []*memberlist.Node{},
 		missedPrevoteCycles: 0,
 	}
+
+	// Print version info.
+	node.printVersionInfo()
 
 	// If there is a state.json, it means that the node has not explicitly left the cluster
 	// and therefore must have been partitioned out or crashed/timed out. At this point, it

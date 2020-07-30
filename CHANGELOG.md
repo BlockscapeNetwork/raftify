@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+---
+
+\-
+
+## v0.2.0
+
+---
+
 ### Breaking Changes
 
 * `InitNode` is now blocking. This means that on startup up a node, it will only unblock once the cluster is properly bootstrapped, that is if the expected number of nodes have formed a cluster
@@ -15,6 +23,7 @@
 ### General Changes
 
 * Bump to memberlist `v0.2.2`
+* Added version info on startup
 
 ### Testing
 
