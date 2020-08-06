@@ -54,23 +54,9 @@ The configuration is to be provided in a `raftify.json` file and must be located
 }
 ```
 
-## Usage
+## Getting Started
 
-### Step 1
-
-Get the latest version of [raftify-cosmos-sdk](https://github.com/BlockscapeLab/raftify-cosmos-sdk).
-
-### Step 2
-
-Get [Gaia](https://github.com/cosmos/gaia) and check out the latest version.
-
-Once you have checked out the latest version, open up the `go.mod` file and add the following line at the very bottom:
-
-```go
-replace github.com/cosmos/cosmos-sdk => github.com/BlockscapeLab/raftify-cosmos-sdk v0.37.9-R1
-```
-
-All that is left to do now is to build Gaia. For more information on how to do that, check out Gaia's [Makefile](https://github.com/cosmos/gaia/blob/master/Makefile).
+For a step-by-step guide on how to get started with your raftified Cosmos validator, check out [this tutorial](doc/getting-started.md).
 
 ## Testing
 
