@@ -68,6 +68,14 @@ func (n *Node) runCandidate() {
 			}
 			n.handleVoteResponse(content)
 
+		case NewQuorumMsg:
+			var content NewQuorum
+			if err := json.Unmarshal(msg.Content, &content); err != nil {
+				n.logger.Printf("[ERR] raftify: error while unmarshaling new quorum message: %v\n", err.Error())
+				break
+			}
+			n.handleNewQuorum(content)
+
 		default:
 			n.logger.Printf("[WARN] raftify: received %v as candidate, discarding...\n", msg.Type.toString())
 		}
@@ -90,6 +98,6 @@ func (n *Node) runCandidate() {
 		n.saveState()
 
 	case <-n.shutdownCh:
-		n.toShutdown()
+		n.toPreShutdown()
 	}
 }

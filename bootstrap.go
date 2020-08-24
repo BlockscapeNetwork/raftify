@@ -66,6 +66,6 @@ func (n *Node) runBootstrap() {
 		}
 
 	case <-n.shutdownCh:
-		n.toShutdown()
+		n.toPreShutdown()
 	}
 }
