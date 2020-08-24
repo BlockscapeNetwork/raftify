@@ -190,3 +190,26 @@ func (n *Node) handleVoteResponse(msg VoteResponse) {
 		n.logger.Printf("[DEBUG] raftify: Received vote response from %v (not granted)\n", msg.FollowerID)
 	}
 }
+
+// handleNewQuorum handles the receival of a new quorum message from a node in the PreShutdown state.
+func (n *Node) handleNewQuorum(msg NewQuorum) {
+	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
+	n.quorum = msg.NewQuorum
+
+	// Wait for the event to be fired to continue operation
+	<-n.events.eventCh
+	n.saveState()
+
+	if msg.NewQuorum == 1 {
+		n.logger.Printf("[DEBUG] raftify: %v is the only node left in the cluster, entering leader state for term %v...", n.config.ID, n.currentTerm)
+
+		// Switch to the Leader state without calling toLeader in order to bypass the state change
+		// restriction in this corner case.
+		n.timeoutTimer.Stop()  // Leaders have no timeout
+		n.startMessageTicker() // Used to periodically send out heartbeat messages
+		n.heartbeatIDList.reset()
+
+		n.votedFor = ""
+		n.state = Leader
+	}
+}
