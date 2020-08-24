@@ -294,6 +294,8 @@ func (n *Node) runLoop() {
 			n.runCandidate()
 		case Leader:
 			n.runLeader()
+		case PreShutdown:
+			n.runPreShutdown()
 		case Shutdown:
 			n.runShutdown()
 			return // exit loop and kill goroutine after shutdown
