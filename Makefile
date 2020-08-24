@@ -8,5 +8,5 @@ unit-tests:
 # Integration Tests
 integration-tests:
 	@echo "Running integration tests for Raftify..."
-	@go test -v -parallel=1 helpers_test.go api.go bootstrap.go candidate.go config.go follower.go handlers.go leader.go lists.go messages.go node.go precandidate.go rejoin.go shutdown.go state.go types.go util.go node_integration_test.go
+	@go test -v -parallel=1 helpers_test.go api.go bootstrap.go candidate.go config.go follower.go handlers.go leader.go lists.go messages.go node.go precandidate.go preshutdown.go rejoin.go shutdown.go state.go types.go util.go version.go node_integration_test.go
 	@echo "Tests finished"
