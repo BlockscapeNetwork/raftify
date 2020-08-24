@@ -3,6 +3,8 @@ package raftify
 import (
 	"testing"
 	"time"
+
+	"github.com/hashicorp/memberlist"
 )
 
 func TestHandleHeartbeatAsFollower(t *testing.T) {
@@ -428,6 +430,53 @@ func TestHandleVoteResponse(t *testing.T) {
 	vr.VoteGranted = true
 	node.voteList.pending = append(node.voteList.pending, node.memberlist.LocalNode())
 	node.handleVoteResponse(vr)
+
+	if node.state != Leader {
+		t.Logf("Expected node to be in the Leader state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+}
+
+func TestHandleNewQuorum(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	// Initialize and start dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+	node.createMemberlist()
+	defer node.memberlist.Shutdown()
+
+	nq := NewQuorum{
+		NewQuorum: 2,
+	}
+
+	done := make(chan bool)
+	defer node.deleteState()
+
+	// Test case if new quorum greater than 1 is handled
+	go func() {
+		node.handleNewQuorum(nq)
+		done <- true
+	}()
+
+	node.events.eventCh <- memberlist.NodeEvent{}
+	<-done
+
+	if node.state == Leader {
+		t.Logf("Expected node to be in any other state but the Leader state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+
+	// Test case if new quorum is 1
+	nq.NewQuorum = 1
+
+	go func() {
+		node.handleNewQuorum(nq)
+		done <- true
+	}()
+
+	node.events.eventCh <- memberlist.NodeEvent{}
+	<-done
 
 	if node.state != Leader {
 		t.Logf("Expected node to be in the Leader state, instead got %v", node.state.toString())
