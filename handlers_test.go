@@ -454,7 +454,7 @@ func TestHandleNewQuorum(t *testing.T) {
 	done := make(chan bool)
 	defer node.deleteState()
 
-	// Test case if new quorum greater than 1 is handled and leave event is fired
+	// Valid test case if new quorum greater than 1 is handled and leave event is fired
 	go func() {
 		node.handleNewQuorum(nq)
 		done <- true
@@ -462,6 +462,9 @@ func TestHandleNewQuorum(t *testing.T) {
 
 	node.events.eventCh <- memberlist.NodeEvent{
 		Event: memberlist.NodeLeave,
+		Node: &memberlist.Node{
+			Name: "TestNode",
+		},
 	}
 	<-done
 
@@ -474,7 +477,7 @@ func TestHandleNewQuorum(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Test case if new quorum is 1 and leave event is fired
+	// Valid test case if new quorum is 1 and leave event is fired
 	nq.NewQuorum = 1
 
 	go func() {
@@ -484,6 +487,9 @@ func TestHandleNewQuorum(t *testing.T) {
 
 	node.events.eventCh <- memberlist.NodeEvent{
 		Event: memberlist.NodeLeave,
+		Node: &memberlist.Node{
+			Name: "TestNode",
+		},
 	}
 	<-done
 
@@ -496,7 +502,7 @@ func TestHandleNewQuorum(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Test case if join event is fired
+	// Invalid test case if join event is fired
 	nq.NewQuorum = 0
 
 	go func() {
@@ -506,14 +512,9 @@ func TestHandleNewQuorum(t *testing.T) {
 
 	node.events.eventCh <- memberlist.NodeEvent{
 		Event: memberlist.NodeJoin,
-	}
-
-	select {
-	case <-time.After(3 * time.Second):
-		break
-	case <-done:
-		t.Logf("Expected node to keep waiting on a leave event, instead it returned on a join event")
-		t.FailNow()
+		Node: &memberlist.Node{
+			Name: "TestNode",
+		},
 	}
 
 	if node.quorum != 1 {
