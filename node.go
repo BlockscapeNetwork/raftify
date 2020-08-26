@@ -238,6 +238,16 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	return node, nil
 }
 
+// getNodeByName returns the full Node struct from memberlist to the specified name.
+func (n *Node) getNodeByName(name string) (*memberlist.Node, error) {
+	for _, member := range n.memberlist.Members() {
+		if name == member.Name {
+			return member, nil
+		}
+	}
+	return nil, fmt.Errorf("couldn't find %v in the local memberlist", name)
+}
+
 // resetTimeout resets the internal timeout timer to a random duration measured in milliseconds.
 func (n *Node) resetTimeout() {
 	n.timeoutTimer.Reset(time.Duration(rand.Intn(MaxTimeout*n.config.Performance-MinTimeout*n.config.Performance)+MinTimeout*n.config.Performance) * time.Millisecond)
