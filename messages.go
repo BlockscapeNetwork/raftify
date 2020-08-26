@@ -2,7 +2,6 @@ package raftify
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/hashicorp/memberlist"
 )
