@@ -2,6 +2,8 @@ package raftify
 
 import (
 	"fmt"
+
+	"github.com/hashicorp/memberlist"
 )
 
 // handleHeartbeat handles the receival of a heartbeat message from a leader.
@@ -193,11 +195,18 @@ func (n *Node) handleVoteResponse(msg VoteResponse) {
 
 // handleNewQuorum handles the receival of a new quorum message from a node in the PreShutdown state.
 func (n *Node) handleNewQuorum(msg NewQuorum) {
-	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
-	n.quorum = msg.NewQuorum
+	n.logger.Println("[DEBUG] raftify: Received new quorum notification, waiting for node to leave...")
 
 	// Wait for the event to be fired to continue operation
-	<-n.events.eventCh
+	for {
+		event := <-n.events.eventCh
+		if event.Event == memberlist.NodeLeave {
+			break
+		}
+	}
+
+	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
+	n.quorum = msg.NewQuorum
 	n.saveState()
 
 	if msg.NewQuorum == 1 {
