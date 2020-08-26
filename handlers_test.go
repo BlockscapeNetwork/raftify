@@ -448,6 +448,7 @@ func TestHandleNewQuorum(t *testing.T) {
 
 	nq := NewQuorum{
 		NewQuorum: 2,
+		LeavingID: "TestNode",
 	}
 
 	done := make(chan bool)
