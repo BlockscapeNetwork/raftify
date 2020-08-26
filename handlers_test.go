@@ -453,21 +453,27 @@ func TestHandleNewQuorum(t *testing.T) {
 	done := make(chan bool)
 	defer node.deleteState()
 
-	// Test case if new quorum greater than 1 is handled
+	// Test case if new quorum greater than 1 is handled and leave event is fired
 	go func() {
 		node.handleNewQuorum(nq)
 		done <- true
 	}()
 
-	node.events.eventCh <- memberlist.NodeEvent{}
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeLeave,
+	}
 	<-done
 
+	if node.quorum != 2 {
+		t.Logf("Expected the quorum to be 2, instead got %v", node.quorum)
+		t.FailNow()
+	}
 	if node.state == Leader {
 		t.Logf("Expected node to be in any other state but the Leader state, instead got %v", node.state.toString())
 		t.FailNow()
 	}
 
-	// Test case if new quorum is 1
+	// Test case if new quorum is 1 and leave event is fired
 	nq.NewQuorum = 1
 
 	go func() {
@@ -475,11 +481,42 @@ func TestHandleNewQuorum(t *testing.T) {
 		done <- true
 	}()
 
-	node.events.eventCh <- memberlist.NodeEvent{}
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeLeave,
+	}
 	<-done
 
+	if node.quorum != 1 {
+		t.Logf("Expected the quorum to be 1, instead got %v", node.quorum)
+		t.FailNow()
+	}
 	if node.state != Leader {
 		t.Logf("Expected node to be in the Leader state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+
+	// Test case if join event is fired
+	nq.NewQuorum = 0
+
+	go func() {
+		node.handleNewQuorum(nq)
+		done <- true
+	}()
+
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeJoin,
+	}
+
+	select {
+	case <-time.After(3 * time.Second):
+		break
+	case <-done:
+		t.Logf("Expected node to keep waiting on a leave event, instead it returned on a join event")
+		t.FailNow()
+	}
+
+	if node.quorum != 1 {
+		t.Logf("Expected quorum to have stayed 1, instead got %v", node.quorum)
 		t.FailNow()
 	}
 }
