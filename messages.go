@@ -59,7 +59,8 @@ type VoteResponse struct {
 // NewQuorum defines the message sent out by a node that is voluntarily leaving the cluster,
 // triggering an immediate quorum change. This does not include crash-related leave events.
 type NewQuorum struct {
-	NewQuorum int `json:"new_quorum"`
+	NewQuorum int    `json:"new_quorum"`
+	LeavingID string `json:"leaving_id"`
 }
 
 // sendHeartbeatToAll sends a heartbeat message to all the other cluster members.
@@ -232,6 +233,7 @@ func (n *Node) sendVoteResponse(candidateid string, grant bool) {
 func (n *Node) sendNewQuorumToAll(newquorum int) int {
 	nqBytes, _ := json.Marshal(NewQuorum{
 		NewQuorum: newquorum,
+		LeavingID: n.config.ID,
 	})
 	msgBytes, _ := json.Marshal(Message{
 		Type:    NewQuorumMsg,
