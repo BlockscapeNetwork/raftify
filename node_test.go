@@ -26,6 +26,36 @@ func TestMemberlist(t *testing.T) {
 	}
 }
 
+func TestTryJoin(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(2)
+
+	// Initialize dummy nodes
+	node1 := initDummyNode("TestNode_1", 1, 2, ports[0])
+	node2 := initDummyNode("TestNode_2", 1, 2, ports[1])
+
+	node1.config.PeerList = []string{fmt.Sprintf("127.0.0.1:%v", node2.config.BindPort)}
+	node2.config.PeerList = []string{fmt.Sprintf("127.0.0.1:%v", node1.config.BindPort)}
+
+	// Start node1 and fail while trying to join node2
+	node1.createMemberlist()
+	defer node1.memberlist.Shutdown()
+
+	if err := node1.tryJoin(); err == nil {
+		t.Logf("Expected node1 to throw an error on tryJoin, instead error was nil")
+		t.FailNow()
+	}
+
+	// Start node2 and succeed while trying to join node1
+	node2.createMemberlist()
+	defer node2.memberlist.Shutdown()
+
+	if err := node2.tryJoin(); err != nil {
+		t.Logf("Expected node2 to successfully join node1, instead got error: %v", err.Error())
+		t.FailNow()
+	}
+}
+
 func ExampleNode_printMemberlist() {
 	node := initDummyNode("TestNode", 1, 1, 4000)
 	node.createMemberlist()
