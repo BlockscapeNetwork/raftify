@@ -254,13 +254,3 @@ func (n *Node) sendNewQuorumToAll(newquorum int) int {
 	}
 	return membersReached
 }
-
-// getNodeByName returns the full Node struct from memberlist to the specified name.
-func (n *Node) getNodeByName(name string) (*memberlist.Node, error) {
-	for _, member := range n.memberlist.Members() {
-		if name == member.Name {
-			return member, nil
-		}
-	}
-	return nil, fmt.Errorf("couldn't find %v in the local memberlist", name)
-}
