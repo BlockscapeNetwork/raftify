@@ -195,14 +195,11 @@ func (n *Node) handleVoteResponse(msg VoteResponse) {
 
 // handleNewQuorum handles the receival of a new quorum message from a node in the PreShutdown state.
 func (n *Node) handleNewQuorum(msg NewQuorum) {
-	n.logger.Println("[DEBUG] raftify: Received new quorum notification, waiting for node to leave...")
+	n.logger.Printf("[DEBUG] raftify: Received new quorum, waiting for %v to leave...\n", msg.LeavingID)
 
-	// Wait for the event to be fired to continue operation
-	for {
-		event := <-n.events.eventCh
-		if event.Event == memberlist.NodeLeave {
-			break
-		}
+	// If the event is not the leave event fired by the node that announced its exit, do nothing
+	if event := <-n.events.eventCh; event.Node.Name != msg.LeavingID && event.Event != memberlist.NodeLeave {
+		return
 	}
 
 	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
