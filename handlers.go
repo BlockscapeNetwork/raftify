@@ -198,7 +198,7 @@ func (n *Node) handleNewQuorum(msg NewQuorum) {
 	n.logger.Printf("[DEBUG] raftify: Received new quorum, waiting for %v to leave...\n", msg.LeavingID)
 
 	// If the event is not the leave event fired by the node that announced its exit, do nothing
-	if event := <-n.events.eventCh; event.Node.Name != msg.LeavingID && event.Event != memberlist.NodeLeave {
+	if event := <-n.events.eventCh; event.Node.Name != msg.LeavingID || event.Event != memberlist.NodeLeave {
 		return
 	}
 
