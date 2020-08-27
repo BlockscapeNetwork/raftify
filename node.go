@@ -238,6 +238,16 @@ func initNode(logger *log.Logger, workingDir string) (*Node, error) {
 	return node, nil
 }
 
+// getNodeByName returns the full Node struct from memberlist to the specified name.
+func (n *Node) getNodeByName(name string) (*memberlist.Node, error) {
+	for _, member := range n.memberlist.Members() {
+		if name == member.Name {
+			return member, nil
+		}
+	}
+	return nil, fmt.Errorf("couldn't find %v in the local memberlist", name)
+}
+
 // resetTimeout resets the internal timeout timer to a random duration measured in milliseconds.
 func (n *Node) resetTimeout() {
 	n.timeoutTimer.Reset(time.Duration(rand.Intn(MaxTimeout*n.config.Performance-MinTimeout*n.config.Performance)+MinTimeout*n.config.Performance) * time.Millisecond)
@@ -273,9 +283,6 @@ func (n *Node) quorumReached(votes int) bool {
 	// a network partition, the quorum of the previous cluster size needs to be reached and thus
 	// no two leaders can exist simultaneously in both partitions. The larger partition will have
 	// a leader, the smaller one won't.
-	// If the node is the only node remaining, it can't fulfil the requirement of also reaching
-	// the previous quorum. In this case, the previous quorum is skipped. This is the only time
-	// this requirement is lifted.
 	n.logger.Printf("[DEBUG] raftify: %v quorum reached: (%v/%v)\n", n.state.toString(), votes, n.quorum)
 	n.quorum = int(len(n.memberlist.Members())/2) + 1
 	return true
@@ -297,6 +304,8 @@ func (n *Node) runLoop() {
 			n.runCandidate()
 		case Leader:
 			n.runLeader()
+		case PreShutdown:
+			n.runPreShutdown()
 		case Shutdown:
 			n.runShutdown()
 			return // exit loop and kill goroutine after shutdown

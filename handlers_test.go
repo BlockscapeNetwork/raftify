@@ -3,6 +3,8 @@ package raftify
 import (
 	"testing"
 	"time"
+
+	"github.com/hashicorp/memberlist"
 )
 
 func TestHandleHeartbeatAsFollower(t *testing.T) {
@@ -431,6 +433,91 @@ func TestHandleVoteResponse(t *testing.T) {
 
 	if node.state != Leader {
 		t.Logf("Expected node to be in the Leader state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+}
+
+func TestHandleNewQuorum(t *testing.T) {
+	// Reserve ports for this test
+	ports := reservePorts(1)
+
+	// Initialize and start dummy node
+	node := initDummyNode("TestNode", 1, 1, ports[0])
+	node.createMemberlist()
+	defer node.memberlist.Shutdown()
+
+	nq := NewQuorum{
+		NewQuorum: 2,
+		LeavingID: "TestNode",
+	}
+
+	defer node.deleteState()
+
+	// Valid test case if new quorum greater than 1 is handled and leave event is fired
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeLeave,
+		Node: &memberlist.Node{
+			Name: "TestNode",
+		},
+	}
+	node.handleNewQuorum(nq)
+
+	if node.quorum != 2 {
+		t.Logf("Expected the quorum to be 2, instead got %v", node.quorum)
+		t.FailNow()
+	}
+	if node.state == Leader {
+		t.Logf("Expected node to be in any other state but the Leader state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+
+	// Valid test case if new quorum is 1 and leave event is fired
+	nq.NewQuorum = 1
+
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeLeave,
+		Node: &memberlist.Node{
+			Name: "TestNode",
+		},
+	}
+	node.handleNewQuorum(nq)
+
+	if node.quorum != 1 {
+		t.Logf("Expected the quorum to be 1, instead got %v", node.quorum)
+		t.FailNow()
+	}
+	if node.state != Leader {
+		t.Logf("Expected node to be in the Leader state, instead got %v", node.state.toString())
+		t.FailNow()
+	}
+
+	// Invalid test case if join event is fired
+	nq.NewQuorum = 0
+
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeJoin,
+		Node: &memberlist.Node{
+			Name: "TestNode",
+		},
+	}
+	node.handleNewQuorum(nq)
+
+	if node.quorum != 1 {
+		t.Logf("Expected quorum to have stayed 1, instead got %v", node.quorum)
+		t.FailNow()
+	}
+
+	// Invalid test case if leave event is fired by wrong node
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeLeave,
+		Node: &memberlist.Node{
+			Name: "WrongTestNode",
+		},
+	}
+	node.handleNewQuorum(nq)
+
+	if node.quorum != 1 {
+		t.Logf("Expected quorum to have stayed 1, instead got %v", node.quorum)
 		t.FailNow()
 	}
 }

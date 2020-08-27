@@ -39,6 +39,12 @@ func TestStateToString(t *testing.T) {
 		t.Fail()
 	}
 
+	state = PreShutdown
+	if state.toString() != "PreShutdown" {
+		t.Logf("Expected to get \"PreShutdown\", instead got %v", state.toString())
+		t.Fail()
+	}
+
 	state = Shutdown
 	if state.toString() != "Shutdown" {
 		t.Logf("Expected to get \"Shutdown\", instead got %v", state.toString())
@@ -86,6 +92,12 @@ func TestMessageTypeToString(t *testing.T) {
 	msg = VoteResponseMsg
 	if msg.toString() != "VoteResponseMsg" {
 		t.Logf("Expected to get \"VoteResponseMsg\", instead got %v", msg.toString())
+		t.Fail()
+	}
+
+	msg = NewQuorumMsg
+	if msg.toString() != "NewQuorumMsg" {
+		t.Logf("Expected to get \"NewQuorumMsg\", instead got %v", msg.toString())
 		t.Fail()
 	}
 

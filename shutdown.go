@@ -14,9 +14,6 @@ func (n *Node) toShutdown() {
 // runShutdown stops all timers/tickers and listens, closes channels, leaves the memberlist
 // and shuts down the node eventually.
 func (n *Node) runShutdown() {
-	n.timeoutTimer.Stop()
-	n.messageTicker.Stop()
-
 	n.deleteState()
 
 	var errs string

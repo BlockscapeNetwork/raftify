@@ -2,7 +2,6 @@ package raftify
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -55,6 +54,13 @@ type VoteResponse struct {
 	Term        uint64 `json:"term"`
 	FollowerID  string `json:"follower_id"`
 	VoteGranted bool   `json:"vote_granted"`
+}
+
+// NewQuorum defines the message sent out by a node that is voluntarily leaving the cluster,
+// triggering an immediate quorum change. This does not include crash-related leave events.
+type NewQuorum struct {
+	NewQuorum int    `json:"new_quorum"`
+	LeavingID string `json:"leaving_id"`
 }
 
 // sendHeartbeatToAll sends a heartbeat message to all the other cluster members.
@@ -220,12 +226,32 @@ func (n *Node) sendVoteResponse(candidateid string, grant bool) {
 	}
 }
 
-// getNodeByName returns the full Node struct from memberlist to the specified name.
-func (n *Node) getNodeByName(name string) (*memberlist.Node, error) {
+// sendNewQuorumToAll sends the new quorum to the rest of the cluster triggered by a voluntary
+// leave event. Once memberlist has processed the leave event internally, this message is used
+// to trigger an immediate change of the new quorum instead of waiting for the dead node to
+// be kicked. This function returns the number of nodes that the new quorum could be sent to.
+func (n *Node) sendNewQuorumToAll(newquorum int) int {
+	nqBytes, _ := json.Marshal(NewQuorum{
+		NewQuorum: newquorum,
+		LeavingID: n.config.ID,
+	})
+	msgBytes, _ := json.Marshal(Message{
+		Type:    NewQuorumMsg,
+		Content: nqBytes,
+	})
+
+	// Count how many members received the new quorum message
+	membersReached := 0
+
 	for _, member := range n.memberlist.Members() {
-		if name == member.Name {
-			return member, nil
+		if member.Name == n.config.ID {
+			continue
 		}
+		if err := n.memberlist.SendReliable(member, msgBytes); err != nil {
+			n.logger.Printf("[ERR] raftify: couldn't send new quorum to %v: %v\n", member.Name, err.Error())
+			continue
+		}
+		membersReached++
 	}
-	return nil, fmt.Errorf("couldn't find %v in the local memberlist", name)
+	return membersReached
 }

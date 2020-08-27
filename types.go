@@ -37,6 +37,10 @@ const (
 	// partitioned out and doesn't receive the majority of heartbeat responses it steps down.
 	Leader
 
+	// PreShutdown is the state in which a node prepares its own voluntary leave by notifying the
+	// rest of the cluster of an immediate quorum change.
+	PreShutdown
+
 	// Shutdown is the state in which a node initiates a shutdown and gracefully allows the
 	// runLoop goroutine to be exited and killed.
 	Shutdown
@@ -57,6 +61,8 @@ func (s *State) toString() string {
 		return "Candidate"
 	case Leader:
 		return "Leader"
+	case PreShutdown:
+		return "PreShutdown"
 	case Shutdown:
 		return "Shutdown"
 	default:
@@ -92,6 +98,11 @@ const (
 	// A vote response message is sent by the node who received the vote
 	// request to the candidate it originated from.
 	VoteResponseMsg
+
+	// A new quorum message is sent out by a voluntarily leaving node. It triggers
+	// an immediate quorum change instead of having to wait for the cluster to
+	// detect and kick the dead node eventually.
+	NewQuorumMsg
 )
 
 // toString returns the string representation of a message type.
@@ -109,6 +120,8 @@ func (t *MessageType) toString() string {
 		return "VoteRequestMsg"
 	case VoteResponseMsg:
 		return "VoteResponseMsg"
+	case NewQuorumMsg:
+		return "NewQuorumMsg"
 	default:
 		return "unknown"
 	}

@@ -2,6 +2,8 @@ package raftify
 
 import (
 	"fmt"
+
+	"github.com/hashicorp/memberlist"
 )
 
 // handleHeartbeat handles the receival of a heartbeat message from a leader.
@@ -188,5 +190,40 @@ func (n *Node) handleVoteResponse(msg VoteResponse) {
 		}
 	} else {
 		n.logger.Printf("[DEBUG] raftify: Received vote response from %v (not granted)\n", msg.FollowerID)
+	}
+}
+
+// handleNewQuorum handles the receival of a new quorum message from a node in the PreShutdown state.
+func (n *Node) handleNewQuorum(msg NewQuorum) {
+	n.logger.Printf("[DEBUG] raftify: Received new quorum, waiting for %v to leave...\n", msg.LeavingID)
+
+	// If the event is not the leave event fired by the node that announced its exit, do nothing
+	if event := <-n.events.eventCh; event.Node.Name != msg.LeavingID || event.Event != memberlist.NodeLeave {
+		switch event.Event {
+		case memberlist.NodeJoin:
+			n.logger.Printf("[ERR] raftify: Unsuspected join event from %v\n", event.Node.Name)
+		case memberlist.NodeUpdate:
+			n.logger.Printf("[ERR] raftify: Unsuspected update event from %v\n", event.Node.Name)
+		case memberlist.NodeLeave:
+			n.logger.Printf("[ERR] raftify: Unsuspected leave event from %v, expected leave from %v\n", event.Node.Name, msg.LeavingID)
+		}
+		return
+	}
+
+	n.logger.Printf("[DEBUG] raftify: Setting the quorum from %v to %v\n", n.quorum, msg.NewQuorum)
+	n.quorum = msg.NewQuorum
+	n.saveState()
+
+	if msg.NewQuorum == 1 {
+		n.logger.Printf("[DEBUG] raftify: %v is the only node left in the cluster, entering leader state for term %v...", n.config.ID, n.currentTerm)
+
+		// Switch to the Leader state without calling toLeader in order to bypass the state change
+		// restriction in this corner case.
+		n.timeoutTimer.Stop()  // Leaders have no timeout
+		n.startMessageTicker() // Used to periodically send out heartbeat messages
+		n.heartbeatIDList.reset()
+
+		n.votedFor = ""
+		n.state = Leader
 	}
 }
