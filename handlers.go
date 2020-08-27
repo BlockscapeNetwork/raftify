@@ -199,10 +199,13 @@ func (n *Node) handleNewQuorum(msg NewQuorum) {
 
 	// If the event is not the leave event fired by the node that announced its exit, do nothing
 	if event := <-n.events.eventCh; event.Node.Name != msg.LeavingID || event.Event != memberlist.NodeLeave {
-		if event.Event == memberlist.NodeJoin {
+		switch event.Event {
+		case memberlist.NodeJoin:
 			n.logger.Printf("[ERR] raftify: Unsuspected join event from %v\n", event.Node.Name)
-		} else if event.Event == memberlist.NodeUpdate {
+		case memberlist.NodeUpdate:
 			n.logger.Printf("[ERR] raftify: Unsuspected update event from %v\n", event.Node.Name)
+		case memberlist.NodeLeave:
+			n.logger.Printf("[ERR] raftify: Unsuspected leave event from %v, expected leave from %v\n", event.Node.Name, msg.LeavingID)
 		}
 		return
 	}
