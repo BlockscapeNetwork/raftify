@@ -451,22 +451,16 @@ func TestHandleNewQuorum(t *testing.T) {
 		LeavingID: "TestNode",
 	}
 
-	done := make(chan bool)
 	defer node.deleteState()
 
 	// Valid test case if new quorum greater than 1 is handled and leave event is fired
-	go func() {
-		node.handleNewQuorum(nq)
-		done <- true
-	}()
-
 	node.events.eventCh <- memberlist.NodeEvent{
 		Event: memberlist.NodeLeave,
 		Node: &memberlist.Node{
 			Name: "TestNode",
 		},
 	}
-	<-done
+	node.handleNewQuorum(nq)
 
 	if node.quorum != 2 {
 		t.Logf("Expected the quorum to be 2, instead got %v", node.quorum)
@@ -480,18 +474,13 @@ func TestHandleNewQuorum(t *testing.T) {
 	// Valid test case if new quorum is 1 and leave event is fired
 	nq.NewQuorum = 1
 
-	go func() {
-		node.handleNewQuorum(nq)
-		done <- true
-	}()
-
 	node.events.eventCh <- memberlist.NodeEvent{
 		Event: memberlist.NodeLeave,
 		Node: &memberlist.Node{
 			Name: "TestNode",
 		},
 	}
-	<-done
+	node.handleNewQuorum(nq)
 
 	if node.quorum != 1 {
 		t.Logf("Expected the quorum to be 1, instead got %v", node.quorum)
@@ -505,17 +494,27 @@ func TestHandleNewQuorum(t *testing.T) {
 	// Invalid test case if join event is fired
 	nq.NewQuorum = 0
 
-	go func() {
-		node.handleNewQuorum(nq)
-		done <- true
-	}()
-
 	node.events.eventCh <- memberlist.NodeEvent{
 		Event: memberlist.NodeJoin,
 		Node: &memberlist.Node{
 			Name: "TestNode",
 		},
 	}
+	node.handleNewQuorum(nq)
+
+	if node.quorum != 1 {
+		t.Logf("Expected quorum to have stayed 1, instead got %v", node.quorum)
+		t.FailNow()
+	}
+
+	// Invalid test case if leave event is fired by wrong node
+	node.events.eventCh <- memberlist.NodeEvent{
+		Event: memberlist.NodeLeave,
+		Node: &memberlist.Node{
+			Name: "WrongTestNode",
+		},
+	}
+	node.handleNewQuorum(nq)
 
 	if node.quorum != 1 {
 		t.Logf("Expected quorum to have stayed 1, instead got %v", node.quorum)
