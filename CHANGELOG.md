@@ -4,6 +4,12 @@
 
 ---
 
+\-
+
+## v0.3.0
+
+---
+
 ### General Changes
 
 * Added custom handling for intended leave events in order to distinguish them better from crash-related ones

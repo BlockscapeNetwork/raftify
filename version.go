@@ -16,7 +16,7 @@ type VersionInfo struct {
 func (v VersionInfo) GetVersionInfo() VersionInfo {
 	return VersionInfo{
 		Name:      "Raftify",
-		Version:   "v0.2.0",
+		Version:   "v0.3.0",
 		GoVersion: fmt.Sprintf("%v %v/%v", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 	}
 }
